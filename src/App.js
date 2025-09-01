@@ -4,6 +4,7 @@ import { ConfigProvider } from 'antd';
 import esES from 'antd/locale/es_ES';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
+import './styles/custom.css';
 
 // Importar páginas
 import Login from './pages/Login';

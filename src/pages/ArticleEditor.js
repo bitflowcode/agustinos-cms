@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Form,
@@ -12,12 +12,12 @@ import {
   message,
   Layout,
   Spin,
-  Upload
+  Upload,
+  DatePicker
 } from 'antd';
 import {
   SaveOutlined,
   ArrowLeftOutlined,
-  SendOutlined,
   PlusOutlined,
   UploadOutlined
 } from '@ant-design/icons';
@@ -25,6 +25,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { articlesAPI } from '../utils/api';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -45,6 +46,7 @@ const ArticleEditor = () => {
   const [audioUrl, setAudioUrl] = useState('');
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingAudio, setUploadingAudio] = useState(false);
+  const [articleDate, setArticleDate] = useState(null);
 
   // Configuración básica del editor Quill
   const quillModules = {
@@ -63,7 +65,7 @@ const ArticleEditor = () => {
   ];
 
   // Cargar artículo existente si está editando
-  const loadArticle = async (articleId) => {
+  const loadArticle = useCallback(async (articleId) => {
     setLoading(true);
     try {
       const response = await articlesAPI.getArticleById(articleId);
@@ -77,7 +79,8 @@ const ArticleEditor = () => {
           title: article.title,
           section: article.section,
           subtitle: article.subtitle,
-          description: article.description
+          description: article.description,
+          date: article.date ? dayjs(article.date) : null
         });
         
         // Establecer el contenido en el editor
@@ -85,7 +88,7 @@ const ArticleEditor = () => {
         
         // Establecer imagen y audio si existen
         setImageUrl(article.imageUrl || '');
-        setAudioUrl(article.audioUrl || '');setContent(article.content || '');
+        setAudioUrl(article.audioUrl || '');
         
         message.success('Artículo cargado para edición');
       } else {
@@ -99,7 +102,7 @@ const ArticleEditor = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, form]);
 
   // Cargar secciones
   const loadSections = async () => {
@@ -147,7 +150,7 @@ const ArticleEditor = () => {
       const token = localStorage.getItem('cms_token');
       
       // Upload real a Bunny CDN
-      const response = await fetch('http://localhost:3001/api/upload/image', {
+      const response = await fetch('https://agustinos-cms.vercel.app/api/upload-image', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -166,6 +169,7 @@ const ArticleEditor = () => {
 
     } catch (error) {
       message.error('Error al subir la imagen');
+    } finally {
       setUploadingImage(false);
     }
 
@@ -196,7 +200,7 @@ const ArticleEditor = () => {
       const token = localStorage.getItem('cms_token');
       
       // Upload real a Bunny CDN
-      const response = await fetch('http://localhost:3001/api/upload/audio', {
+      const response = await fetch('https://agustinos-cms.vercel.app/api/upload-audio', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -215,6 +219,7 @@ const ArticleEditor = () => {
 
     } catch (error) {
       message.error('Error al subir el audio');
+    } finally {
       setUploadingAudio(false);
     }
 
@@ -241,7 +246,8 @@ const ArticleEditor = () => {
         section: values.section || 'General',
         imageUrl: imageUrl || null,
         hasAudio: Boolean(audioUrl),
-        audioUrl: audioUrl || null
+        audioUrl: audioUrl || null,
+        date: values.date ? values.date.toISOString() : null
       };
 
       let response;
@@ -278,7 +284,7 @@ const ArticleEditor = () => {
     if (isEditing && id) {
       loadArticle(id);
     }
-  }, [isEditing, id]);
+  }, [isEditing, id, loadArticle]);
 
   if (loading) {
     return (
@@ -369,7 +375,22 @@ const ArticleEditor = () => {
                 />
               </Form.Item>
 
-              {/* NUEVO: Campo de imagen */}
+              {/* Campo de fecha de publicación */}
+              <Form.Item
+                name="date"
+                label="Fecha de publicación"
+                tooltip="Selecciona cuándo se publicará este artículo. Déjalo vacío para usar la fecha actual."
+              >
+                <DatePicker
+                  showTime
+                  format="DD/MM/YYYY HH:mm"
+                  placeholder="Seleccionar fecha y hora"
+                  style={{ width: '100%' }}
+                  onChange={(value) => setArticleDate(value)}
+                />
+              </Form.Item>
+
+              {/* Campo de imagen */}
               <Form.Item
                 label="Imagen del artículo (opcional)"
               >
@@ -407,7 +428,7 @@ const ArticleEditor = () => {
                 </Space>
               </Form.Item>
 
-              {/* NUEVO: Campo de audio */}
+              {/* Campo de audio */}
               <Form.Item
                 label="Audio del artículo (opcional)"
               >
@@ -519,7 +540,12 @@ const ArticleEditor = () => {
                 </div>
                 <div>
                   <Text type="secondary">Publicación: </Text>
-                  <Text strong>Inmediata</Text>
+                  <Text strong>
+                    {form.getFieldValue('date') 
+                      ? `Programada: ${dayjs(form.getFieldValue('date')).format('DD/MM/YYYY HH:mm')}` 
+                      : 'Inmediata'
+                    }
+                  </Text>
                 </div>
               </Space>
             </Card>

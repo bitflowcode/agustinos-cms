@@ -1,0 +1,204 @@
+/* Estilos personalizados para CMS Agustinos */
+
+/* Mejoras tipográficas globales */
+.ant-typography {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+/* Títulos principales más grandes y legibles */
+.ant-typography h1 {
+  font-size: 2.2rem !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+}
+
+.ant-typography h2 {
+  font-size: 1.8rem !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+}
+
+.ant-typography h3 {
+  font-size: 1.5rem !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+
+/* Texto del cuerpo más legible */
+.ant-typography {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+}
+
+/* Mejoras en las tarjetas de estadísticas */
+.ant-statistic-title {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #666 !important;
+}
+
+.ant-statistic-content {
+  font-size: 24px !important;
+  font-weight: 600 !important;
+}
+
+/* Mejoras en las listas de artículos */
+.ant-list-item-meta-title {
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  margin-bottom: 4px !important;
+}
+
+.ant-list-item-meta-description {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+  color: #666 !important;
+}
+
+/* Mejoras en la tabla de artículos */
+.ant-table-thead > tr > th {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+.ant-table-tbody > tr > td {
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+/* Títulos de artículos en la tabla más legibles */
+.ant-table-tbody .ant-typography {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+
+/* Mejoras en los botones */
+.ant-btn {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+}
+
+.ant-btn-lg {
+  font-size: 16px !important;
+  height: 42px !important;
+  border-radius: 8px !important;
+}
+
+/* Mejoras en los inputs */
+.ant-input {
+  font-size: 14px !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+}
+
+.ant-select-selector {
+  font-size: 14px !important;
+  height: 36px !important;
+  border-radius: 6px !important;
+}
+
+/* Mejoras en los tags */
+.ant-tag {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+  padding: 2px 8px !important;
+}
+
+/* Mejoras en la paginación */
+.ant-pagination-item {
+  font-size: 14px !important;
+}
+
+.ant-pagination-total-text {
+  font-size: 14px !important;
+  color: #666 !important;
+}
+
+/* Mejoras en los avatares cuadrados con esquinas redondeadas */
+.ant-avatar {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.ant-avatar img {
+  object-fit: cover !important;
+}
+
+/* Mejoras en las tarjetas */
+.ant-card-head-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+.ant-card-body {
+  font-size: 14px !important;
+}
+
+/* Mejoras en los tooltips */
+.ant-tooltip-inner {
+  font-size: 13px !important;
+}
+
+/* Mejoras en los mensajes */
+.ant-message {
+  font-size: 14px !important;
+}
+
+/* Mejoras en los popconfirm */
+.ant-popover-inner-content {
+  font-size: 14px !important;
+}
+
+/* Mejoras en el header del dashboard */
+.dashboard-header .ant-typography {
+  font-size: 1.8rem !important;
+  font-weight: 600 !important;
+}
+
+.dashboard-header .ant-typography-caption {
+  font-size: 14px !important;
+  color: #666 !important;
+}
+
+/* Mejoras en la información del sistema */
+.system-info .ant-typography {
+  font-size: 13px !important;
+  line-height: 1.5 !important;
+}
+
+/* Mejoras en los iconos de secciones */
+.section-avatar {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+}
+
+/* Mejoras en los botones de acción rápida */
+.quick-actions .ant-btn {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  height: 40px !important;
+}
+
+/* Mejoras en el texto de bienvenida */
+.welcome-text {
+  font-size: 14px !important;
+  color: #666 !important;
+}
+
+/* Mejoras en los filtros */
+.filter-section .ant-input,
+.filter-section .ant-select-selector {
+  font-size: 14px !important;
+}
+
+/* Mejoras en el texto de resultados */
+.results-text {
+  font-size: 14px !important;
+  color: #666 !important;
+  margin-top: 4px !important;
+}

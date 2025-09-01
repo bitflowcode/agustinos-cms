@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Table,
   Card,
@@ -34,7 +35,8 @@ const { Content } = Layout;
 
 const ArticlesList = () => {
   const navigate = useNavigate();
-  const [articles, setArticles] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [allArticles, setAllArticles] = useState([]); // Todos los artículos sin filtrar
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(false);
   const [filteredArticles, setFilteredArticles] = useState([]);
@@ -43,15 +45,23 @@ const ArticlesList = () => {
     section: ''
   });
 
-  // Cargar artículos desde /api/articles/cms
+  // Leer parámetro section de la URL al cargar
+  useEffect(() => {
+    const sectionFromURL = searchParams.get('section');
+    if (sectionFromURL && sectionFromURL !== filters.section) {
+      setFilters(prev => ({ ...prev, section: sectionFromURL }));
+    }
+  }, [searchParams, filters.section]);
+
+  // Cargar TODOS los artículos (sin filtro de sección, manejado en frontend)
   const loadArticles = async () => {
     setLoading(true);
     try {
+      // Obtener todos los artículos sin filtro (límite 200)
       const response = await articlesAPI.getArticles();
       
       if (response.success) {
-        setArticles(response.data);
-        setFilteredArticles(response.data);
+        setAllArticles(response.data);
         message.success(`${response.data.length} artículos cargados`);
       }
     } catch (error) {
@@ -97,9 +107,16 @@ const ArticlesList = () => {
     }
   };
 
-  // Filtrar artículos localmente
-  const applyFilters = () => {
-    let filtered = [...articles];
+  // Aplicar filtros (tanto búsqueda como sección, TODO en frontend)
+  const applyFilters = useCallback(() => {
+    let filtered = [...allArticles];
+
+    // Filtro por sección (ahora en frontend)
+    if (filters.section) {
+      filtered = filtered.filter(article => 
+        article.section === filters.section
+      );
+    }
 
     // Filtro por búsqueda
     if (filters.search) {
@@ -110,20 +127,13 @@ const ArticlesList = () => {
       );
     }
 
-    // Filtro por sección
-    if (filters.section) {
-      filtered = filtered.filter(article => 
-        article.section === filters.section
-      );
-    }
-
     setFilteredArticles(filtered);
-  };
+  }, [allArticles, filters]);
 
-  // Aplicar filtros cuando cambien
+  // Aplicar filtros cuando cambien los filtros o artículos
   useEffect(() => {
     applyFilters();
-  }, [filters, articles]);
+  }, [applyFilters]);
 
   // Limpiar filtros
   const handleClearFilters = () => {
@@ -131,11 +141,26 @@ const ArticlesList = () => {
       search: '',
       section: ''
     });
+    // Limpiar parámetros de URL
+    setSearchParams({});
+  };
+
+  // Cambiar sección y actualizar URL
+  const handleSectionChange = (value) => {
+    const newSection = value || '';
+    setFilters(prev => ({ ...prev, section: newSection }));
+    
+    // Actualizar URL
+    if (newSection) {
+      setSearchParams({ section: newSection });
+    } else {
+      setSearchParams({});
+    }
   };
 
   useEffect(() => {
-    loadArticles();
     loadSections();
+    loadArticles();
   }, []);
 
   // Truncar texto
@@ -176,12 +201,17 @@ const ArticlesList = () => {
       title: '',
       dataIndex: 'imageUrl',
       key: 'image',
-      width: 60,
+      width: 70,
       render: (imageUrl) => (
         <Avatar
-          size={40}
+          size={48}
           src={imageUrl}
-          style={{ backgroundColor: '#f0f0f0' }}
+          style={{ 
+            backgroundColor: '#f0f0f0',
+            borderRadius: '8px',
+            width: '48px',
+            height: '48px'
+          }}
         >
           {!imageUrl && '📄'}
         </Avatar>
@@ -299,8 +329,9 @@ const ArticlesList = () => {
                 Gestión de Artículos
               </Title>
             </Space>
-            <Text type="secondary">
-              {filteredArticles.length} de {articles.length} artículos
+            <Text type="secondary" className="results-text">
+              {filteredArticles.length} de {allArticles.length} artículos
+              {filters.section && ` - Sección: ${filters.section}`}
             </Text>
           </Col>
           <Col>
@@ -316,7 +347,7 @@ const ArticlesList = () => {
         </Row>
 
         {/* Filtros */}
-        <Card style={{ marginBottom: 16 }}>
+        <Card className="filter-section" style={{ marginBottom: 16 }}>
           <Row gutter={16} align="middle">
             <Col flex="auto">
               <Input
@@ -332,7 +363,7 @@ const ArticlesList = () => {
                 placeholder="Filtrar por sección"
                 style={{ width: 200 }}
                 value={filters.section || undefined}
-                onChange={(value) => setFilters(prev => ({ ...prev, section: value || '' }))}
+                onChange={handleSectionChange}
                 allowClear
               >
                 {sections.map(section => (
