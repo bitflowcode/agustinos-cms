@@ -65,3 +65,4 @@ pids
 
 # dotenv environment variables file
 .env
+.vercel

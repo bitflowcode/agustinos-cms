@@ -37,12 +37,12 @@ api.interceptors.response.use(
 // Funciones de autenticación
 export const authAPI = {
   login: async (username, password) => {
-    const response = await api.post('/login', { username, password });
+    const response = await api.post('/auth/login', { username, password });
     return response.data;
   },
   
   getMe: async () => {
-    const response = await api.get('/me');
+    const response = await api.get('/auth/me');
     return response.data;
   },
 };
@@ -50,49 +50,42 @@ export const authAPI = {
 // Funciones de artículos
 export const articlesAPI = {
   getSections: async () => {
-    const response = await api.get('/sections');
+    const response = await api.get('/articles/sections');
     return response.data;
   },
   
   getStats: async () => {
-    const response = await api.get('/stats');
+    const response = await api.get('/articles/stats');
     return response.data;
   },
   
   // CMS - Obtener lista de artículos
-  getArticles: async (section = null) => {
-    let url = '/cms';
-    
-    // Agregar parámetro section si se especifica
-    if (section) {
-      url += `?section=${encodeURIComponent(section)}`;
-    }
-    
-    const response = await api.get(url);
+  getArticles: async () => {
+    const response = await api.get('/articles/cms');
     return response.data;
   },
   
   // CMS - Crear nuevo artículo
   createArticle: async (articleData) => {
-    const response = await api.post('/cms', articleData);
+    const response = await api.post('/articles/cms', articleData);
     return response.data;
   },
   
   // CMS - Obtener artículo por ID para editar
   getArticleById: async (id) => {
-    const response = await api.get(`/cms/${id}`);
+    const response = await api.get(`/articles/cms/${id}`);
     return response.data;
   },
   
   // CMS - Actualizar artículo
   updateArticle: async (id, articleData) => {
-    const response = await api.put(`/cms/${id}`, articleData);
+    const response = await api.put(`/articles/cms/${id}`, articleData);
     return response.data;
   },
   
   // CMS - Eliminar artículo
   deleteArticle: async (id) => {
-    const response = await api.delete(`/cms/${id}`);
+    const response = await api.delete(`/articles/cms/${id}`);
     return response.data;
   },
 };
