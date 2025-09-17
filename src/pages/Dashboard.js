@@ -74,7 +74,7 @@ const Dashboard = () => {
   };
 
   const navigateToCreateArticle = () => {
-    navigate('/articles/create');
+    navigate('/articles/new');
   };
 
   if (loading) {

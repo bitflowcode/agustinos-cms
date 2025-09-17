@@ -1,0 +1,48 @@
+{
+  "functions": {
+    "api/cms.js": {
+      "maxDuration": 30
+    },
+    "api/cms/[id].js": {
+      "maxDuration": 30
+    },
+    "api/cms-by-id.js": {
+      "maxDuration": 30
+    },
+    "api/login.js": {
+      "maxDuration": 30
+    },
+    "api/me.js": {
+      "maxDuration": 30
+    },
+    "api/sections.js": {
+      "maxDuration": 30
+    },
+    "api/stats.js": {
+      "maxDuration": 30
+    },
+    "api/upload-image.js": {
+      "maxDuration": 30
+    },
+    "api/upload-audio.js": {
+      "maxDuration": 30
+    },
+    "api/video-token.js": {
+      "maxDuration": 30
+    },
+    "api/video-upload.js": {
+      "maxDuration": 120
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/upload/video-token",
+      "destination": "http://49.12.239.163:3002/api/upload/video-token"
+    },
+    {
+      "source": "/api/upload/video",
+      "destination": "http://49.12.239.163:3002/api/upload/video"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

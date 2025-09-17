@@ -80,19 +80,19 @@ export const articlesAPI = {
   
   // CMS - Obtener artículo por ID para editar
   getArticleById: async (id) => {
-    const response = await api.get(`/cms/${id}`);
+    const response = await api.get(`/cms-by-id?id=${id}`);
     return response.data;
   },
   
   // CMS - Actualizar artículo
   updateArticle: async (id, articleData) => {
-    const response = await api.put(`/cms/${id}`, articleData);
+    const response = await api.put(`/cms-by-id?id=${id}`, articleData);
     return response.data;
   },
   
   // CMS - Eliminar artículo
   deleteArticle: async (id) => {
-    const response = await api.delete(`/cms/${id}`);
+    const response = await api.delete(`/cms-by-id?id=${id}`);
     return response.data;
   },
 };

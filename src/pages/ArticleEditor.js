@@ -33,7 +33,11 @@ import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+
 const { Content } = Layout;
+
+// Para Functions proxy en Vercel, usamos rutas relativas
+const API_BASE = '';
 
 const ArticleEditor = () => {
   const navigate = useNavigate();
@@ -220,7 +224,7 @@ const ArticleEditor = () => {
       // Obtener token de autenticación
       const token = localStorage.getItem('cms_token');
       
-      // Upload real a Bunny CDN
+      // Upload real a Bunny CDN (API Route del CMS → backend)
       const response = await fetch('https://agustinos-cms.vercel.app/api/upload-image', {
         method: 'POST',
         headers: {
@@ -270,7 +274,7 @@ const ArticleEditor = () => {
       // Obtener token de autenticación
       const token = localStorage.getItem('cms_token');
       
-      // Upload real a Bunny CDN
+      // Upload real a Bunny CDN (API Route del CMS → backend)
       const response = await fetch('https://agustinos-cms.vercel.app/api/upload-audio', {
         method: 'POST',
         headers: {
@@ -297,55 +301,76 @@ const ArticleEditor = () => {
     return false; // Prevenir upload automático de Ant Design
   };
 
-  // Función para subir video MP4 a Bunny CDN
+  // Función para subir video MP4 a Bunny CDN (servidor de Hetzner)
   const handleVideoUpload = async (file) => {
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = file.type?.startsWith('video/');
     if (!isVideo) {
       message.error('Solo puedes subir archivos de video');
       return false;
     }
 
-    const isLt50M = file.size / 1024 / 1024 < 50;
-    if (!isLt50M) {
-      message.error('El video debe ser menor a 50MB');
-      return false;
-    }
+    // Sin límite de tamaño - streaming directo a Bunny CDN vía servidor Hetzner
+    console.log(`Subiendo video de ${Math.round(file.size / 1024 / 1024)}MB...`);
 
     setUploadingVideo(true);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-    
-      const token = localStorage.getItem('cms_token');
-      
-      const response = await fetch('https://agustinos-cms.vercel.app/api/upload-video', {
+      // 1) Solicitar token temporal al servidor de Hetzner
+      const tokenResponse = await fetch(`/api/upload/video-token`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('cms_token') || ''}`,
         },
-        body: formData
+        body: JSON.stringify({
+          ext: 'mp4',
+          dir: 'videos'
+        }),
       });
-    
-      const result = await response.json();
+
+      if (!tokenResponse.ok) {
+        const tErr = await tokenResponse.text().catch(() => '');
+        throw new Error(`Token request failed: ${tErr || tokenResponse.status}`);
+      }
+
+      const { token, finalUrl } = await tokenResponse.json();
+
+      // 2) Subir el fichero directamente al servidor de Hetzner (streaming)
+      const uploadResponse = await fetch(`/api/upload/video?token=${encodeURIComponent(token)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type || 'video/mp4',
+          'Authorization': `Bearer ${localStorage.getItem('cms_token') || ''}`,
+        },
+        body: file,
+      });
+
+      if (!uploadResponse.ok) {
+        const uErr = await uploadResponse.text().catch(() => '');
+        throw new Error(`Upload failed: ${uErr || uploadResponse.status}`);
+      }
+
+      const result = await uploadResponse.json();
       
       if (result.success) {
+        // 3) Guardar URL final (CDN)
         setVideoUrl(result.data.videoUrl);
         message.success('Video subido exitosamente');
       } else {
-        message.error(result.error || 'Error al subir video');
+        throw new Error(result.error || 'Error en la respuesta del servidor');
       }
-
     } catch (error) {
-      message.error('Error al subir el video');
+      console.error('Error al subir el video:', error);
+      message.error(error.message || 'Error al subir el video');
     } finally {
       setUploadingVideo(false);
     }
 
+    // Evitar que Ant Design haga upload automático
     return false;
   };
 
-  // Función para subir thumbnail de video
+  // ======== NUEVO: Subida de thumbnail de video ========
   const handleVideoThumbnailUpload = async (file) => {
     const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
     if (!isJpgOrPng) {
@@ -367,6 +392,7 @@ const ArticleEditor = () => {
     
       const token = localStorage.getItem('cms_token');
       
+      // Usa la API Route del CMS (que proxyea al backend)
       const response = await fetch('https://agustinos-cms.vercel.app/api/upload-image', {
         method: 'POST',
         headers: {
@@ -391,9 +417,9 @@ const ArticleEditor = () => {
     }
 
     return false;
-  }
+  };
 
-  // Renderizar vista previa del video
+  // ======== NUEVO: Vista previa de video ========
   const renderVideoPreview = () => {
     if (!hasVideo || !videoUrl) return null;
 
@@ -763,7 +789,7 @@ const ArticleEditor = () => {
                               </Button>
                             </Upload>
                             <div style={{ marginTop: 4, fontSize: 12, color: '#666' }}>
-                              Tamaño máximo: 50MB. Formatos soportados: MP4, WebM, AVI
+                              Sin límite de tamaño. Formatos soportados: MP4, WebM, AVI
                             </div>
                           </div>
                         </div>
