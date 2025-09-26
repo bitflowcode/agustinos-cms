@@ -64,20 +64,105 @@ const ArticleEditor = () => {
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingVideoThumb, setUploadingVideoThumb] = useState(false);
 
-  // Configuración básica del editor Quill
+  // Función para subir imagen desde el editor Quill
+  const handleQuillImageUpload = async (file) => {
+    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/webp';
+    if (!isJpgOrPng) {
+      message.error('Solo puedes subir archivos JPG, PNG o WebP');
+      return false;
+    }
+
+    const isLt5M = file.size / 1024 / 1024 < 5;
+    if (!isLt5M) {
+      message.error('La imagen debe ser menor a 5MB');
+      return false;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+    
+      const token = localStorage.getItem('cms_token');
+      
+      const response = await fetch('https://agustinos-cms.vercel.app/api/upload-image', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+    
+      const result = await response.json();
+      
+      if (result.success) {
+        message.success('Imagen insertada en el contenido');
+        return result.data.imageUrl;
+      } else {
+        message.error(result.error || 'Error al subir imagen');
+        return false;
+      }
+
+    } catch (error) {
+      message.error('Error al subir la imagen');
+      return false;
+    }
+  };
+
+  // Handler personalizado para imágenes en Quill
+  const handleImageInsert = () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files[0];
+      if (file) {
+        const imageUrl = await handleQuillImageUpload(file);
+        if (imageUrl) {
+          // Insertar la imagen en el editor
+          const quill = document.querySelector('.ql-editor').__quill;
+          const range = quill.getSelection();
+          quill.insertEmbed(range.index, 'image', imageUrl);
+          quill.setSelection(range.index + 1);
+        }
+      }
+    };
+  };
+
+  // Configuración del editor Quill
   const quillModules = {
     toolbar: [
+      // Encabezados
       [{ 'header': [1, 2, 3, false] }],
+      
+      // Formato básico
       ['bold', 'italic', 'underline', 'strike'],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-      ['link', 'blockquote'],
+      [{ 'color': [] }, { 'background': [] }],
+      
+      // Alineación
+      [{ 'align': [] }],
+      
+      // Listas
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      
+      // Elementos especiales
+      ['blockquote', 'code-block'],
+      ['link', 'image'],
+      
+      // Herramientas
       ['clean']
-    ],
+    ]
   };
 
   const quillFormats = [
-    'header', 'bold', 'italic', 'underline', 'strike',
-    'list', 'bullet', 'link', 'blockquote'
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'align',
+    'list', 'bullet',
+    'blockquote', 'code-block',
+    'link', 'image'
   ];
 
   // Función para detectar y validar URLs de video
@@ -139,7 +224,6 @@ const ArticleEditor = () => {
           title: article.title,
           section: article.section,
           subtitle: article.subtitle,
-          description: article.description,
           date: article.date ? dayjs(article.date) : null
         });
         
@@ -468,6 +552,12 @@ const ArticleEditor = () => {
     try {
       const values = await form.validateFields();
       
+      // Debug: verificar qué valores se están obteniendo
+      console.log('🔍 Valores del formulario:', values);
+      console.log('🔍 Sección seleccionada:', values.section);
+      console.log('🔍 Fecha seleccionada:', values.date);
+      console.log('🔍 Fecha como string:', values.date ? values.date.toISOString() : 'No hay fecha');
+      
       if (!content.trim()) {
         message.error('El contenido es obligatorio');
         return;
@@ -488,7 +578,6 @@ const ArticleEditor = () => {
       const articleData = {
         title: values.title,
         subtitle: values.subtitle || null,
-        description: values.description || null,
         content: content,
         section: values.section || 'General',
         imageUrl: imageUrl || null,
@@ -498,8 +587,11 @@ const ArticleEditor = () => {
         videoUrl: hasVideo ? videoUrl || null : null,
         videoType: hasVideo ? finalVideoType : null,
         videoThumbnail: hasVideo ? videoThumbnail || null : null,
-        date: values.date ? values.date.toISOString() : null
+        date: values.date ? values.date.toISOString() : new Date().toISOString()
       };
+
+      // Debug: verificar qué datos se están enviando
+      console.log('🔍 Datos del artículo a enviar:', articleData);
 
       let response;
       
@@ -536,6 +628,41 @@ const ArticleEditor = () => {
       loadArticle(id);
     }
   }, [isEditing, id, loadArticle]);
+
+  // Reinicializar el editor cuando cambie el contenido
+  useEffect(() => {
+    if (content && isEditing) {
+      // Pequeño delay para asegurar que el DOM esté listo
+      const timer = setTimeout(() => {
+        const quillElement = document.querySelector('.ql-toolbar');
+        if (quillElement) {
+          quillElement.style.display = 'block';
+          quillElement.style.visibility = 'visible';
+        }
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [content, isEditing]);
+
+  // Forzar actualización de campos en la columna derecha
+  useEffect(() => {
+    if (currentArticle && isEditing) {
+      // Pequeño delay para asegurar que el formulario esté renderizado
+      const timer = setTimeout(() => {
+        // Forzar actualización de la sección
+        if (currentArticle.section) {
+          form.setFieldValue('section', currentArticle.section);
+        }
+        // Forzar actualización de la fecha
+        if (currentArticle.date) {
+          form.setFieldValue('date', dayjs(currentArticle.date));
+        }
+      }, 200);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentArticle, isEditing, form]);
 
   if (loading) {
     return (
@@ -590,137 +717,223 @@ const ArticleEditor = () => {
               layout="vertical"
               size="large"
             >
-              {/* Título */}
-              <Form.Item
-                name="title"
-                label="Título del artículo"
-                rules={[
-                  { required: true, message: 'El título es obligatorio' },
-                  { min: 5, message: 'El título debe tener al menos 5 caracteres' }
-                ]}
-              >
-                <Input 
-                  placeholder="Escribe un título atractivo..."
-                  style={{ fontSize: '18px', fontWeight: 'bold' }}
-                />
-              </Form.Item>
+              {/* Sección: Información Básica */}
+              <div style={{ 
+                marginBottom: 24, 
+                paddingBottom: 16, 
+                borderBottom: '2px solid #f0f0f0' 
+              }}>
+                <Title level={4} style={{ 
+                  color: '#1890ff', 
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  📝 Información Básica
+                </Title>
+                
+                {/* Título */}
+                <Form.Item
+                  name="title"
+                  label={
+                    <span style={{ 
+                      fontSize: '16px', 
+                      fontWeight: 'bold',
+                      color: '#262626'
+                    }}>
+                      Título del artículo
+                    </span>
+                  }
+                  rules={[
+                    { required: true, message: 'El título es obligatorio' },
+                    { min: 5, message: 'El título debe tener al menos 5 caracteres' }
+                  ]}
+                >
+                  <Input 
+                    placeholder="Escribe un título atractivo..."
+                    style={{ 
+                      fontSize: '18px', 
+                      fontWeight: 'bold',
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      border: '2px solid #d9d9d9'
+                    }}
+                  />
+                </Form.Item>
 
-              {/* Subtítulo (opcional) */}
-              <Form.Item
-                name="subtitle"
-                label="Subtítulo (opcional)"
-              >
-                <Input 
-                  placeholder="Subtítulo del artículo..."
-                />
-              </Form.Item>
+                {/* Subtítulo (opcional) */}
+                <Form.Item
+                  name="subtitle"
+                  label={
+                    <span style={{ 
+                      fontSize: '14px', 
+                      fontWeight: '600',
+                      color: '#595959'
+                    }}>
+                      Subtítulo (opcional)
+                    </span>
+                  }
+                >
+                  <Input 
+                    placeholder="Subtítulo del artículo..."
+                    style={{ 
+                      padding: '10px 14px',
+                      borderRadius: '6px'
+                    }}
+                  />
+                </Form.Item>
+              </div>
 
-              {/* Descripción (opcional) */}
-              <Form.Item
-                name="description"
-                label="Descripción (opcional)"
-              >
-                <Input.TextArea 
-                  rows={2}
-                  placeholder="Breve descripción del artículo..."
-                />
-              </Form.Item>
 
-              {/* Campo de fecha de publicación */}
-              <Form.Item
-                name="date"
-                label="Fecha de publicación"
-                tooltip="Selecciona cuándo se publicará este artículo. Déjalo vacío para usar la fecha actual."
-              >
-                <DatePicker
-                  showTime
-                  format="DD/MM/YYYY HH:mm"
-                  placeholder="Seleccionar fecha y hora"
-                  style={{ width: '100%' }}
-                  onChange={(value) => setArticleDate(value)}
-                />
-              </Form.Item>
 
-              {/* Campo de imagen */}
-              <Form.Item
-                label="Imagen del artículo (opcional)"
-              >
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Upload
-                    name="image"
-                    listType="picture-card"
-                    className="image-uploader"
-                    showUploadList={false}
-                    beforeUpload={handleImageUpload}
-                    accept="image/*"
-                  >
-                    {imageUrl ? (
-                      <img 
-                        src={imageUrl} 
-                        alt="article" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                    ) : (
-                      <div>
-                        <PlusOutlined />
-                        <div style={{ marginTop: 8 }}>Subir imagen</div>
-                      </div>
-                    )}
-                  </Upload>
-                  {imageUrl && (
-                    <Button 
-                      danger 
-                      size="small" 
-                      onClick={() => setImageUrl('')}
+              {/* Sección: Contenido Multimedia */}
+              <div style={{ 
+                marginBottom: 24, 
+                paddingBottom: 16, 
+                borderBottom: '2px solid #f0f0f0' 
+              }}>
+                <Title level={4} style={{ 
+                  color: '#52c41a', 
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  🎨 Contenido Multimedia
+                </Title>
+
+                {/* Campo de imagen */}
+                <Form.Item
+                  label={
+                    <span style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '600',
+                      color: '#262626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      🖼️ Imagen del artículo (opcional)
+                    </span>
+                  }
+                >
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Upload
+                      name="image"
+                      listType="picture-card"
+                      className="image-uploader"
+                      showUploadList={false}
+                      beforeUpload={handleImageUpload}
+                      accept="image/*"
+                      style={{ borderRadius: '8px' }}
                     >
-                      Eliminar imagen
-                    </Button>
-                  )}
-                </Space>
-              </Form.Item>
-
-              {/* Campo de audio */}
-              <Form.Item
-                label="Audio del artículo (opcional)"
-              >
-                <Space direction="vertical" style={{ width: '100%' }}>
-                  <Upload
-                    name="audio"
-                    showUploadList={false}
-                    beforeUpload={handleAudioUpload}
-                    accept="audio/*"
-                  >
-                    <Button icon={<UploadOutlined />}>
-                      {audioUrl ? 'Cambiar audio' : 'Subir audio'}
-                    </Button>
-                  </Upload>
-                  {audioUrl && (
-                    <Space direction="vertical" style={{ width: '100%' }}>
-                      <audio controls style={{ width: '100%' }}>
-                        <source src={audioUrl} type="audio/mpeg" />
-                        Tu navegador no soporta el elemento audio.
-                      </audio>
+                      {imageUrl ? (
+                        <img 
+                          src={imageUrl} 
+                          alt="article" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} 
+                        />
+                      ) : (
+                        <div style={{ textAlign: 'center' }}>
+                          <PlusOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+                          <div style={{ marginTop: 8, fontWeight: '500' }}>Subir imagen</div>
+                        </div>
+                      )}
+                    </Upload>
+                    {imageUrl && (
                       <Button 
                         danger 
                         size="small" 
-                        onClick={() => setAudioUrl('')}
+                        onClick={() => setImageUrl('')}
+                        style={{ borderRadius: '6px' }}
                       >
-                        Eliminar audio
+                        Eliminar imagen
                       </Button>
-                    </Space>
-                  )}
-                </Space>
-              </Form.Item>
-
-              {/* NUEVA SECCIÓN: CAMPO DE VIDEO */}
-              <Form.Item
-                label={
-                  <Space>
-                    <VideoCameraOutlined />
-                    <span>Video del artículo (opcional)</span>
+                    )}
                   </Space>
-                }
-              >
+                </Form.Item>
+
+                {/* Campo de audio */}
+                <Form.Item
+                  label={
+                    <span style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '600',
+                      color: '#262626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      🎵 Audio del artículo (opcional)
+                    </span>
+                  }
+                >
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    <Upload
+                      name="audio"
+                      showUploadList={false}
+                      beforeUpload={handleAudioUpload}
+                      accept="audio/*"
+                    >
+                      <Button 
+                        icon={<UploadOutlined />}
+                        style={{ borderRadius: '6px', height: '40px' }}
+                      >
+                        {audioUrl ? 'Cambiar audio' : 'Subir audio'}
+                      </Button>
+                    </Upload>
+                    {audioUrl && (
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <audio controls style={{ width: '100%', borderRadius: '6px' }}>
+                          <source src={audioUrl} type="audio/mpeg" />
+                          Tu navegador no soporta el elemento audio.
+                        </audio>
+                        <Button 
+                          danger 
+                          size="small" 
+                          onClick={() => setAudioUrl('')}
+                          style={{ borderRadius: '6px' }}
+                        >
+                          Eliminar audio
+                        </Button>
+                      </Space>
+                    )}
+                  </Space>
+                </Form.Item>
+              </div>
+
+              {/* Sección: Video */}
+              <div style={{ 
+                marginBottom: 24, 
+                paddingBottom: 16, 
+                borderBottom: '2px solid #f0f0f0' 
+              }}>
+                <Title level={4} style={{ 
+                  color: '#fa8c16', 
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  🎬 Video del Artículo
+                </Title>
+
+                <Form.Item
+                  label={
+                    <span style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '600',
+                      color: '#262626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      <VideoCameraOutlined />
+                      Video del artículo (opcional)
+                    </span>
+                  }
+                >
                 <Space direction="vertical" style={{ width: '100%' }}>
                   {/* Switch para habilitar video */}
                   <div>
@@ -853,18 +1066,160 @@ const ArticleEditor = () => {
                     </Card>
                   )}
                 </Space>
-              </Form.Item>
+                </Form.Item>
+              </div>
 
-              {/* Sección */}
+              {/* Campo de sección (oculto pero funcional) */}
               <Form.Item
                 name="section"
-                label="Sección"
+                style={{ display: 'none' }}
+              >
+                <Input />
+              </Form.Item>
+
+              {/* Campo de fecha (oculto pero funcional) */}
+              <Form.Item
+                name="date"
+                style={{ display: 'none' }}
+              >
+                <DatePicker />
+              </Form.Item>
+
+              {/* Sección: Contenido Principal */}
+              <div style={{ 
+                marginBottom: 24, 
+                paddingBottom: 16, 
+                borderBottom: '2px solid #f0f0f0' 
+              }}>
+                <Title level={4} style={{ 
+                  color: '#722ed1', 
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}>
+                  ✍️ Contenido Principal
+                </Title>
+
+                <Form.Item
+                  label={
+                    <span style={{ 
+                      fontSize: '16px', 
+                      fontWeight: 'bold',
+                      color: '#262626',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6
+                    }}>
+                      📄 Contenido del artículo
+                      <span style={{ 
+                        color: '#ff4d4f', 
+                        fontSize: '14px',
+                        marginLeft: 4
+                      }}>
+                        *
+                      </span>
+                    </span>
+                  }
+                  required
+                >
+                <div 
+                  className="quill-editor-wrapper"
+                  style={{ 
+                    border: '2px solid #d9d9d9', 
+                    borderRadius: '8px',
+                    backgroundColor: '#fff',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <ReactQuill
+                    key={`quill-${isEditing ? id : 'new'}`}
+                    theme="snow"
+                    value={content}
+                    onChange={setContent}
+                    modules={quillModules}
+                    formats={quillFormats}
+                    placeholder="Escribe el contenido de tu artículo aquí..."
+                    style={{
+                      height: '400px'
+                    }}
+                  />
+                </div>
+                {!content.trim() && (
+                  <div style={{ 
+                    color: '#ff4d4f', 
+                    fontSize: '13px', 
+                    marginTop: 8,
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4
+                  }}>
+                    ⚠️ El contenido es obligatorio
+                  </div>
+                )}
+                </Form.Item>
+              </div>
+            </Form>
+            </Card>
+          </Col>
+
+          {/* Panel lateral */}
+          <Col xs={24} lg={6}>
+            {/* Programar publicación */}
+            <Card 
+              title={
+                <Space>
+                  <span style={{ color: '#1890ff', fontWeight: 'bold' }}>📅</span>
+                  <span style={{ fontWeight: 'bold' }}>Programar publicación</span>
+                </Space>
+              } 
+              size="small"
+              style={{ marginBottom: 16, border: '2px solid #1890ff', borderRadius: 8 }}
+            >
+              <Form.Item
+                name="date"
+                style={{ marginBottom: 0 }}
+                tooltip="Selecciona cuándo se publicará este artículo. Déjalo vacío para usar la fecha actual."
+              >
+                <DatePicker
+                  showTime
+                  format="DD/MM/YYYY HH:mm"
+                  placeholder="Seleccionar fecha y hora"
+                  style={{ width: '100%' }}
+                  onChange={(value) => {
+                    setArticleDate(value);
+                    // Sincronizar con el campo oculto del formulario principal
+                    form.setFieldValue('date', value);
+                  }}
+                />
+              </Form.Item>
+            </Card>
+
+            {/* Sección */}
+            <Card 
+              title={
+                <Space>
+                  <span style={{ color: '#52c41a', fontWeight: 'bold' }}>📂</span>
+                  <span style={{ fontWeight: 'bold' }}>Sección</span>
+                </Space>
+              } 
+              size="small"
+              style={{ marginBottom: 16, border: '2px solid #52c41a', borderRadius: 8 }}
+            >
+              <Form.Item
+                name="section"
+                style={{ marginBottom: 0 }}
               >
                 <Select
                   placeholder="Selecciona una sección"
                   showSearch
                   allowClear
                   optionFilterProp="children"
+                  onChange={(value) => {
+                    // Sincronizar con el campo oculto del formulario principal
+                    form.setFieldValue('section', value);
+                  }}
                 >
                   {sections.map(section => (
                     <Option key={section.section_name} value={section.section_name}>
@@ -873,36 +1228,23 @@ const ArticleEditor = () => {
                   ))}
                 </Select>
               </Form.Item>
-
-              {/* Editor de contenido */}
-              <Form.Item
-                label="Contenido del artículo"
-                required
-              >
-                <div style={{ border: '1px solid #d9d9d9', borderRadius: 6 }}>
-                  <ReactQuill
-                    theme="snow"
-                    value={content}
-                    onChange={setContent}
-                    modules={quillModules}
-                    formats={quillFormats}
-                    style={{ minHeight: 300 }}
-                    placeholder="Escribe el contenido de tu artículo aquí..."
-                  />
-                </div>
-                {!content.trim() && (
-                  <div style={{ color: '#ff4d4f', fontSize: '12px', marginTop: 4 }}>
-                    El contenido es obligatorio
-                  </div>
-                )}
-              </Form.Item>
-            </Form>
             </Card>
-          </Col>
 
-          {/* Panel lateral */}
-          <Col xs={24} lg={6}>
-            <Card title="Información" size="small">
+            <Card 
+              title={
+                <span style={{ 
+                  fontSize: '16px', 
+                  fontWeight: 'bold',
+                  color: '#1890ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  ℹ️ Información
+                </span>
+              } 
+              size="small"
+            >
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text type="secondary">Estado: </Text>
@@ -944,7 +1286,22 @@ const ArticleEditor = () => {
               </Space>
             </Card>
 
-            <Card title="Contenido Multimedia" size="small" style={{ marginTop: 16 }}>
+            <Card 
+              title={
+                <span style={{ 
+                  fontSize: '16px', 
+                  fontWeight: 'bold',
+                  color: '#52c41a',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  🎨 Contenido Multimedia
+                </span>
+              } 
+              size="small" 
+              style={{ marginTop: 16 }}
+            >
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text type="secondary">Imagen: </Text>
@@ -967,7 +1324,22 @@ const ArticleEditor = () => {
               </Space>
             </Card>
 
-            <Card title="Estadísticas" size="small" style={{ marginTop: 16 }}>
+            <Card 
+              title={
+                <span style={{ 
+                  fontSize: '16px', 
+                  fontWeight: 'bold',
+                  color: '#722ed1',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6
+                }}>
+                  📊 Estadísticas
+                </span>
+              } 
+              size="small" 
+              style={{ marginTop: 16 }}
+            >
               <Space direction="vertical" style={{ width: '100%' }}>
                 <div>
                   <Text type="secondary">Caracteres: </Text>
@@ -983,6 +1355,18 @@ const ArticleEditor = () => {
                   <Text type="secondary">Tiempo de lectura: </Text>
                   <Text strong>
                     {Math.max(1, Math.ceil(content.replace(/<[^>]*>/g, '').split(/\s+/).length / 200))} min
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary">Imágenes en contenido: </Text>
+                  <Text strong>
+                    {(content.match(/<img[^>]+>/g) || []).length}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary">Enlaces: </Text>
+                  <Text strong>
+                    {(content.match(/<a[^>]+>/g) || []).length}
                   </Text>
                 </div>
               </Space>
