@@ -553,18 +553,17 @@ const ArticleEditor = () => {
       const values = await form.validateFields();
       
       // Debug: verificar qué valores se están obteniendo
-      console.log('🔍 Valores del formulario:', values);
-      console.log('🔍 Sección seleccionada:', values.section);
-      console.log('🔍 Fecha seleccionada:', values.date);
-      console.log('🔍 Fecha como string:', values.date ? values.date.toISOString() : 'No hay fecha');
+      console.log('📝 Valores del formulario:', values);
+      console.log('📝 Sección seleccionada:', values.section);
+      console.log('📝 Fecha seleccionada:', values.date);
       
       if (!content.trim()) {
         message.error('El contenido es obligatorio');
         return;
       }
-
+  
       setSaving(true);
-
+  
       // Determinar el tipo real de video
       let finalVideoType = null;
       if (hasVideo && videoUrl) {
@@ -574,7 +573,26 @@ const ArticleEditor = () => {
           finalVideoType = detectVideoType(videoUrl);
         }
       }
-
+  
+      // 🔥 CORRECCIÓN: Asegurar que date SIEMPRE tenga un valor válido
+      let finalDate;
+      if (values.date && dayjs.isDayjs(values.date)) {
+        // Si hay fecha seleccionada, usarla
+        finalDate = values.date.toISOString();
+      } else if (isEditing && currentArticle?.date) {
+        // Si estamos editando y no hay fecha nueva, mantener la original
+        finalDate = currentArticle.date;
+      } else {
+        // Si no hay fecha, usar la actual
+        finalDate = new Date().toISOString();
+      }
+  
+      // 🔥 CORRECCIÓN: Determinar el status basado en la fecha
+      let finalStatus = 'published';
+      if (values.date && dayjs(values.date).isAfter(dayjs())) {
+        finalStatus = 'scheduled';
+      }
+  
       const articleData = {
         title: values.title,
         subtitle: values.subtitle || null,
@@ -587,12 +605,13 @@ const ArticleEditor = () => {
         videoUrl: hasVideo ? videoUrl || null : null,
         videoType: hasVideo ? finalVideoType : null,
         videoThumbnail: hasVideo ? videoThumbnail || null : null,
-        date: values.date ? values.date.toISOString() : new Date().toISOString()
+        date: finalDate, // ✅ Siempre tendrá un valor válido
+        status: finalStatus // ✅ Añadido el campo status
       };
-
+  
       // Debug: verificar qué datos se están enviando
-      console.log('🔍 Datos del artículo a enviar:', articleData);
-
+      console.log('📤 Datos del artículo a enviar:', articleData);
+  
       let response;
       
       if (isEditing) {
@@ -604,7 +623,7 @@ const ArticleEditor = () => {
         response = await articlesAPI.createArticle(articleData);
         message.success('Artículo creado exitosamente');
       }
-
+  
       if (response.success) {
         navigate('/articles');
       }

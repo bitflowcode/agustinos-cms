@@ -24,10 +24,12 @@ import {
   DeleteOutlined,
   EyeOutlined,
   ReloadOutlined,
-  ArrowLeftOutlined
+  ArrowLeftOutlined,
+  ClockCircleOutlined  // ✅ AÑADIDO
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { articlesAPI } from '../utils/api';
+import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -184,12 +186,27 @@ const ArticlesList = () => {
   };
 
   // Status del artículo
-  const getStatusTag = (status) => {
-    switch (status) {
+  const getStatusTag = (article) => {
+    // Si tiene fecha futura, está programada
+    if (article.date && dayjs(article.date).isAfter(dayjs())) {
+      return (
+        <Tag color="orange" icon={<ClockCircleOutlined />}>
+          Programada
+        </Tag>
+      );
+    }
+    
+    switch (article.status) {
       case 'published':
         return <Tag color="green">Publicado</Tag>;
       case 'draft':
-        return <Tag color="orange">Borrador</Tag>;
+        return <Tag color="default">Borrador</Tag>;
+      case 'scheduled':
+        return (
+          <Tag color="orange" icon={<ClockCircleOutlined />}>
+            Programada
+          </Tag>
+        );
       default:
         return <Tag color="blue">Activo</Tag>;
     }
@@ -254,19 +271,31 @@ const ArticlesList = () => {
       title: 'Estado',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
-      render: (status) => getStatusTag(status)
+      width: 130,
+      render: (status, record) => getStatusTag(record)
     },
     {
       title: 'Fecha',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: 140,
-      render: (date) => (
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          {formatDate(date)}
-        </Text>
-      )
+      dataIndex: 'date',
+      key: 'date',
+      width: 160,
+      render: (date, record) => {
+        // Si está programada (fecha futura), mostrar fecha programada
+        const isProgrammed = date && dayjs(date).isAfter(dayjs());
+        const displayDate = isProgrammed ? date : record.created_at;
+        
+        return (
+          <div>
+            <Text 
+              type={isProgrammed ? "warning" : "secondary"} 
+              style={{ fontSize: '12px', fontWeight: isProgrammed ? 'bold' : 'normal' }}
+            >
+              {isProgrammed && '📅 '}
+              {formatDate(displayDate)}
+            </Text>
+          </div>
+        );
+      }
     },
     {
       title: 'Acciones',
