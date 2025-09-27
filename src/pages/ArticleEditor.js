@@ -547,20 +547,18 @@ const ArticleEditor = () => {
     return null;
   };
 
-  // Guardar artículo (crear o actualizar)
-  const handleSave = async () => {
+  // Guardar artículo (crear, actualizar o borrador)
+  const handleSave = async (isDraft = false) => {
     try {
       const values = await form.validateFields();
       
-      // Debug: verificar qué valores se están obteniendo
       console.log('📝 Valores del formulario:', values);
-      console.log('📝 Sección seleccionada:', values.section);
-      console.log('📝 Fecha seleccionada:', values.date);
+      console.log('📝 Guardando como borrador:', isDraft);
       
-      if (!content.trim()) {
-        message.error('El contenido es obligatorio');
-        return;
-      }
+      // if (!content.trim()) {
+      //   message.error('El contenido es obligatorio');
+      //   return;
+      // }
   
       setSaving(true);
   
@@ -574,23 +572,27 @@ const ArticleEditor = () => {
         }
       }
   
-      // 🔥 CORRECCIÓN: Asegurar que date SIEMPRE tenga un valor válido
+      // Asegurar que date SIEMPRE tenga un valor válido
       let finalDate;
       if (values.date && dayjs.isDayjs(values.date)) {
-        // Si hay fecha seleccionada, usarla
         finalDate = values.date.toISOString();
       } else if (isEditing && currentArticle?.date) {
-        // Si estamos editando y no hay fecha nueva, mantener la original
         finalDate = currentArticle.date;
       } else {
-        // Si no hay fecha, usar la actual
         finalDate = new Date().toISOString();
       }
   
-      // 🔥 CORRECCIÓN: Determinar el status basado en la fecha
-      let finalStatus = 'published';
-      if (values.date && dayjs(values.date).isAfter(dayjs())) {
+      // 🆕 Determinar el status basado en si es borrador o no
+      let finalStatus;
+      if (isDraft) {
+        // Si se guarda como borrador, siempre es 'draft'
+        finalStatus = 'draft';
+      } else if (values.date && dayjs(values.date).isAfter(dayjs())) {
+        // Si tiene fecha futura, es 'scheduled'
         finalStatus = 'scheduled';
+      } else {
+        // Si no, es 'published'
+        finalStatus = 'published';
       }
   
       const articleData = {
@@ -605,23 +607,20 @@ const ArticleEditor = () => {
         videoUrl: hasVideo ? videoUrl || null : null,
         videoType: hasVideo ? finalVideoType : null,
         videoThumbnail: hasVideo ? videoThumbnail || null : null,
-        date: finalDate, // ✅ Siempre tendrá un valor válido
-        status: finalStatus // ✅ Añadido el campo status
+        date: finalDate,
+        status: finalStatus
       };
   
-      // Debug: verificar qué datos se están enviando
       console.log('📤 Datos del artículo a enviar:', articleData);
   
       let response;
       
       if (isEditing) {
-        // Actualizar artículo existente
         response = await articlesAPI.updateArticle(id, articleData);
-        message.success('Artículo actualizado exitosamente');
+        message.success(isDraft ? 'Borrador guardado' : 'Artículo actualizado exitosamente');
       } else {
-        // Crear nuevo artículo
         response = await articlesAPI.createArticle(articleData);
-        message.success('Artículo creado exitosamente');
+        message.success(isDraft ? 'Borrador guardado' : 'Artículo creado exitosamente');
       }
   
       if (response.success) {
@@ -715,13 +714,25 @@ const ArticleEditor = () => {
           <Col>
             <Space>
               <Button
+                icon={<SaveOutlined />}
+                loading={saving}
+                onClick={() => handleSave(true)}
+                size="large"
+                style={{ 
+                  borderColor: '#d9d9d9',
+                  color: '#595959'
+                }}
+              >
+                Guardar Borrador
+              </Button>
+              <Button
                 type="primary"
                 icon={<SaveOutlined />}
                 loading={saving}
-                onClick={handleSave}
+                onClick={() => handleSave(false)}
                 size="large"
               >
-                {isEditing ? 'Actualizar Artículo' : 'Publicar Artículo'}
+                {isEditing ? 'Actualizar y Publicar' : 'Publicar Artículo'}
               </Button>
             </Space>
           </Col>

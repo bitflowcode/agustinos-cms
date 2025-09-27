@@ -25,7 +25,8 @@ import {
   EyeOutlined,
   ReloadOutlined,
   ArrowLeftOutlined,
-  ClockCircleOutlined  // ✅ AÑADIDO
+  ClockCircleOutlined,
+  CopyOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { articlesAPI } from '../utils/api';
@@ -44,7 +45,8 @@ const ArticlesList = () => {
   const [filteredArticles, setFilteredArticles] = useState([]);
   const [filters, setFilters] = useState({
     search: '',
-    section: ''
+    section: '',
+    status: '' // 🆕 Añadir filtro de status
   });
 
   // Leer parámetro section de la URL al cargar
@@ -109,17 +111,63 @@ const ArticlesList = () => {
     }
   };
 
+  // Duplicar artículo
+  const handleDuplicateArticle = async (article) => {
+    try {
+      const duplicatedArticle = {
+        title: `${article.title} (copia)`,
+        subtitle: article.subtitle,
+        content: article.content,
+        section: article.section,
+        imageUrl: article.imageUrl,
+        hasAudio: article.hasAudio,
+        audioUrl: article.audioUrl,
+        hasVideo: article.hasVideo,
+        videoUrl: article.videoUrl,
+        videoType: article.videoType,
+        videoThumbnail: article.videoThumbnail,
+        status: 'draft',
+        date: new Date().toISOString()
+      };
+  
+      const response = await articlesAPI.createArticle(duplicatedArticle);
+      
+      if (response.success) {
+        message.success(`Artículo duplicado como borrador`);
+        // Navegar directamente al editor con el nuevo artículo
+        navigate(`/articles/edit/${response.data.id}`);
+      } else {
+        message.error('Error al duplicar el artículo');
+      }
+    } catch (error) {
+      console.error('Error duplicating article:', error);
+      message.error('Error al duplicar el artículo');
+    }
+  };
+
   // Aplicar filtros (tanto búsqueda como sección, TODO en frontend)
   const applyFilters = useCallback(() => {
     let filtered = [...allArticles];
-
-    // Filtro por sección (ahora en frontend)
+  
+    // Filtro por sección
     if (filters.section) {
       filtered = filtered.filter(article => 
         article.section === filters.section
       );
     }
-
+  
+    // 🆕 Filtro por status
+    if (filters.status) {
+      filtered = filtered.filter(article => {
+        // Para 'scheduled', verificar tanto el status como la fecha futura
+        if (filters.status === 'scheduled') {
+          return article.status === 'scheduled' || 
+                 (article.date && dayjs(article.date).isAfter(dayjs()));
+        }
+        return article.status === filters.status;
+      });
+    }
+  
     // Filtro por búsqueda
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
@@ -128,7 +176,7 @@ const ArticlesList = () => {
         article.content?.toLowerCase().includes(searchLower)
       );
     }
-
+  
     setFilteredArticles(filtered);
   }, [allArticles, filters]);
 
@@ -141,9 +189,9 @@ const ArticlesList = () => {
   const handleClearFilters = () => {
     setFilters({
       search: '',
-      section: ''
+      section: '',
+      status: '' // 🆕 Limpiar también el status
     });
-    // Limpiar parámetros de URL
     setSearchParams({});
   };
 
@@ -187,6 +235,15 @@ const ArticlesList = () => {
 
   // Status del artículo
   const getStatusTag = (article) => {
+    // Si es borrador
+    if (article.status === 'draft') {
+      return (
+        <Tag color="default" icon={<EditOutlined />}>
+          Borrador
+        </Tag>
+      );
+    }
+    
     // Si tiene fecha futura, está programada
     if (article.date && dayjs(article.date).isAfter(dayjs())) {
       return (
@@ -199,8 +256,6 @@ const ArticlesList = () => {
     switch (article.status) {
       case 'published':
         return <Tag color="green">Publicado</Tag>;
-      case 'draft':
-        return <Tag color="default">Borrador</Tag>;
       case 'scheduled':
         return (
           <Tag color="orange" icon={<ClockCircleOutlined />}>
@@ -300,7 +355,7 @@ const ArticlesList = () => {
     {
       title: 'Acciones',
       key: 'actions',
-      width: 120,
+      width: 160, // Aumentar ancho para el nuevo botón
       render: (_, record) => (
         <Space>
           <Tooltip title="Ver detalles">
@@ -308,8 +363,16 @@ const ArticlesList = () => {
               type="text"
               icon={<EyeOutlined />}
               onClick={() => {
-                // Mostrar detalles del artículo
                 message.info(`ID: ${record.id} | Creado: ${formatDate(record.created_at)} | Autor: ${record.author || 'Sin autor'}`);
+              }}
+            />
+          </Tooltip>
+          <Tooltip title="Duplicar">
+            <Button
+              type="text"
+              icon={<CopyOutlined />}
+              onClick={() => {
+                handleDuplicateArticle(record);
               }}
             />
           </Tooltip>
@@ -400,6 +463,19 @@ const ArticlesList = () => {
                     {section.section_name} ({section.article_count})
                   </Option>
                 ))}
+              </Select>
+            </Col>
+            <Col>
+              <Select
+                placeholder="Filtrar por estado"
+                style={{ width: 160 }}
+                value={filters.status || undefined}
+                onChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
+                allowClear
+              >
+                <Option value="published">Publicado</Option>
+                <Option value="scheduled">Programada</Option>
+                <Option value="draft">Borrador</Option>
               </Select>
             </Col>
             <Col>
