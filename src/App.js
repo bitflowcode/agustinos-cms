@@ -6,11 +6,18 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 import './styles/custom.css';
 
-// Importar páginas
+// Importar páginas existentes
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Articles from './pages/Articles';
-import ArticleEditor from './pages/ArticleEditor'; // 👈 NUEVA IMPORTACIÓN
+import ArticleEditor from './pages/ArticleEditor';
+
+// Importar nuevas páginas
+import MiApp from './pages/MiApp';
+import Trash from './pages/Trash';
+
+// Importar nuevo layout
+import AppLayout from './components/AppLayout';
 
 // Componente para rutas protegidas
 const ProtectedRoute = ({ children }) => {
@@ -37,63 +44,93 @@ const PublicRoute = ({ children }) => {
 function AppContent() {
   return (
     <Router>
-      <div className="App">
-        <Routes>
-          {/* Ruta de login */}
-          <Route 
-            path="/login" 
-            element={
-              <PublicRoute>
-                <Login />
-              </PublicRoute>
-            } 
-          />
-          
-          {/* Rutas protegidas */}
-          <Route 
-            path="/dashboard" 
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/articles" 
-            element={
-              <ProtectedRoute>
-                <Articles />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* 👈 NUEVAS RUTAS DEL EDITOR */}
-          <Route 
-            path="/articles/new" 
-            element={
-              <ProtectedRoute>
-                <ArticleEditor />
-              </ProtectedRoute>
-            } 
-          />
-          
-          <Route 
-            path="/articles/edit/:id" 
-            element={
-              <ProtectedRoute>
-                <ArticleEditor />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Redirección por defecto */}
-          <Route 
-            path="/" 
-            element={<Navigate to="/dashboard" />} 
-          />
-        </Routes>
-      </div>
+      <AppLayout>
+        <div className="App">
+          <Routes>
+            {/* Ruta de login */}
+            <Route 
+              path="/login" 
+              element={
+                <PublicRoute>
+                  <Login />
+                </PublicRoute>
+              } 
+            />
+            
+            {/* Rutas protegidas existentes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/articles" 
+              element={
+                <ProtectedRoute>
+                  <Articles />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/articles/new" 
+              element={
+                <ProtectedRoute>
+                  <ArticleEditor />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/articles/edit/:id" 
+              element={
+                <ProtectedRoute>
+                  <ArticleEditor />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Nuevas rutas */}
+            <Route 
+              path="/mi-app" 
+              element={
+                <ProtectedRoute>
+                  <MiApp />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/trash" 
+              element={
+                <ProtectedRoute>
+                  <Trash />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Redirección por defecto */}
+            <Route 
+              path="/" 
+              element={<Navigate to="/dashboard" />} 
+            />
+            
+            {/* Catch-all para rutas no encontradas */}
+            <Route 
+              path="*" 
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/dashboard" replace />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </div>
+      </AppLayout>
     </Router>
   );
 }

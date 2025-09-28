@@ -26,7 +26,8 @@ import {
   ReloadOutlined,
   ArrowLeftOutlined,
   ClockCircleOutlined,
-  CopyOutlined
+  CopyOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { articlesAPI } from '../utils/api';
@@ -355,58 +356,93 @@ const ArticlesList = () => {
     {
       title: 'Acciones',
       key: 'actions',
-      width: 160, // Aumentar ancho para el nuevo botón
+      width: 200, // Aumentar ancho para los botones con texto
       render: (_, record) => (
-        <Space>
-          <Tooltip title="Ver detalles">
+        <Space direction="vertical" style={{ width: '100%' }} size={4}>
+          <Space>
+            <Tooltip title="Ver información del artículo">
+              <Button
+                type="text"
+                icon={<InfoCircleOutlined />}
+                size="small"
+                onClick={() => {
+                  message.info(`ID: ${record.id} | Creado: ${formatDate(record.created_at)} | Autor: ${record.author || 'Sin autor'}`);
+                }}
+                style={{
+                  color: '#666',
+                  fontSize: '16px'
+                }}
+              />
+            </Tooltip>
+            <Tooltip title="Eliminar artículo">
+              <Popconfirm
+                title="¿Estás seguro de eliminar este artículo?"
+                description={`Se eliminará "${truncateText(record.title, 40)}"`}
+                onConfirm={() => handleDeleteArticle(record.id, record.title)}
+                okText="Sí, eliminar"
+                cancelText="Cancelar"
+                okButtonProps={{ danger: true }}
+              >
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  danger
+                  style={{
+                    color: '#ff4d4f',
+                    fontSize: '16px'
+                  }}
+                />
+              </Popconfirm>
+            </Tooltip>
+          </Space>
+          
+          <Space style={{ width: '100%' }}>
             <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => {
-                message.info(`ID: ${record.id} | Creado: ${formatDate(record.created_at)} | Autor: ${record.author || 'Sin autor'}`);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="Duplicar">
-            <Button
-              type="text"
-              icon={<CopyOutlined />}
+              size="small"
               onClick={() => {
                 handleDuplicateArticle(record);
               }}
-            />
-          </Tooltip>
-          <Tooltip title="Editar">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/articles/edit/${record.id}`)}
-            />
-          </Tooltip>
-          <Tooltip title="Eliminar">
-            <Popconfirm
-              title="¿Estás seguro de eliminar este artículo?"
-              description={`Se eliminará "${truncateText(record.title, 40)}"`}
-              onConfirm={() => handleDeleteArticle(record.id, record.title)}
-              okText="Sí, eliminar"
-              cancelText="Cancelar"
-              okButtonProps={{ danger: true }}
+              style={{
+                backgroundColor: '#1890ff',
+                borderColor: '#1890ff',
+                color: 'white',
+                fontSize: '12px',
+                height: '24px',
+                borderRadius: '4px',
+                fontWeight: '500'
+              }}
             >
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                danger
-              />
-            </Popconfirm>
-          </Tooltip>
+              Duplicar
+            </Button>
+            
+            <Button
+              size="small"
+              onClick={() => navigate(`/articles/edit/${record.id}`)}
+              style={{
+                backgroundColor: '#fadb14',
+                borderColor: '#fadb14',
+                color: '#333',
+                fontSize: '12px',
+                height: '24px',
+                borderRadius: '4px',
+                fontWeight: '500'
+              }}
+            >
+              Editar
+            </Button>
+          </Space>
         </Space>
       )
     }
   ];
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Content style={{ padding: '24px' }}>
+      <div style={{ 
+        padding: '24px', 
+        background: '#f0f2f5', 
+        minHeight: '100vh' 
+      }}>
         {/* Header */}
         <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
           <Col>
@@ -515,8 +551,7 @@ const ArticlesList = () => {
             scroll={{ x: 800 }}
           />
         </Card>
-      </Content>
-    </Layout>
+      </div>
   );
 };
 

@@ -1,3 +1,4 @@
+// src/pages/Dashboard.js - Versión actualizada sin header
 import React, { useState, useEffect } from 'react';
 import { 
   Typography, 
@@ -19,17 +20,14 @@ import {
   PlusOutlined,
   EditOutlined,
   BarChartOutlined,
-  CalendarOutlined,
-  UserOutlined
+  CalendarOutlined
 } from '@ant-design/icons';
-import { useAuth } from '../contexts/AuthContext';
 import { articlesAPI } from '../utils/api';
 import { useNavigate } from 'react-router-dom';
 
 const { Title, Text } = Typography;
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recentArticles, setRecentArticles] = useState([]);
@@ -44,13 +42,11 @@ const Dashboard = () => {
     try {
       setLoading(true);
       
-      // Cargar estadísticas
       const statsResponse = await articlesAPI.getStats();
       setStats(statsResponse.data);
       
-      // Cargar artículos recientes
       const articlesResponse = await articlesAPI.getArticles();
-      setRecentArticles(articlesResponse.data.slice(0, 5)); // Solo los 5 más recientes
+      setRecentArticles(articlesResponse.data.slice(0, 5));
       
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -60,12 +56,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-  };
-
   const navigateToSection = (sectionName) => {
-    // Navegar a la sección específica (implementar según tu routing)
     navigate(`/articles?section=${encodeURIComponent(sectionName)}`);
   };
 
@@ -79,7 +70,15 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div style={{ padding: '24px', textAlign: 'center' }}>
+      <div style={{ 
+        padding: '50px', 
+        textAlign: 'center',
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'column'
+      }}>
         <Spin size="large" />
         <p style={{ marginTop: '16px' }}>Cargando dashboard...</p>
       </div>
@@ -95,32 +94,20 @@ const Dashboard = () => {
   }
 
   return (
-    <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-      {/* Header */}
-      <div 
-        className="dashboard-header"
-        style={{ 
-          marginBottom: '32px', 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          background: 'white',
-          padding: '20px',
-          borderRadius: '8px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-        }}
-      >
-        <div>
-          <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-            CMS Agustinos
-          </Title>
-          <Text type="secondary" className="welcome-text">
-            Bienvenido, <strong>{user?.username}</strong> | {user?.role} | {user?.email}
-          </Text>
-        </div>
-        <Button onClick={handleLogout} type="default" icon={<UserOutlined />}>
-          Cerrar Sesión
-        </Button>
+    <div style={{ 
+      padding: '24px', 
+      background: '#f5f5f5', 
+      minHeight: '100vh' 
+    }}>
+      
+      {/* Título de bienvenida */}
+      <div style={{ marginBottom: 32 }}>
+        <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
+          Dashboard
+        </Title>
+        <Text type="secondary">
+          Resumen de tu contenido y actividad reciente
+        </Text>
       </div>
 
       {/* Estadísticas Principales */}
@@ -201,7 +188,7 @@ const Dashboard = () => {
                   ]}
                 >
                   <List.Item.Meta
-                    avatar={<Avatar className="section-avatar" style={{ backgroundColor: '#1890ff' }}>{section.name[0]}</Avatar>}
+                    avatar={<Avatar style={{ backgroundColor: '#1890ff' }}>{section.name[0]}</Avatar>}
                     title={section.name}
                     description={`${section.count} artículos`}
                   />
@@ -299,7 +286,7 @@ const Dashboard = () => {
         }
         style={{ marginTop: '16px' }}
       >
-        <Space wrap className="quick-actions">
+        <Space wrap>
           <Button 
             type="primary" 
             icon={<PlusOutlined />} 
@@ -337,7 +324,6 @@ const Dashboard = () => {
         <Card 
           title="Información del Sistema" 
           size="small" 
-          className="system-info"
           style={{ marginTop: '16px' }}
         >
           <Row gutter={16}>

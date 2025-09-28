@@ -10,7 +10,6 @@ import {
   Col,
   Typography,
   message,
-  Layout,
   Spin,
   Upload,
   DatePicker,
@@ -23,18 +22,18 @@ import {
   PlusOutlined,
   UploadOutlined,
   VideoCameraOutlined,
-  PlayCircleOutlined
+  PlayCircleOutlined,
+  EyeOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { articlesAPI } from '../utils/api';
+import { generatePreviewHTML } from '../utils/previewGenerator';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
-
-const { Content } = Layout;
 
 // Para Functions proxy en Vercel, usamos rutas relativas
 const API_BASE = '';
@@ -547,6 +546,36 @@ const ArticleEditor = () => {
     return null;
   };
 
+  // Función previsualización del artículo
+  const openPreview = () => {
+    const formValues = form.getFieldsValue();
+    
+    const previewData = {
+      title: formValues.title || 'Título del artículo',
+      subtitle: formValues.subtitle || '',
+      content: content || '<p>Contenido del artículo...</p>',
+      section: formValues.section || 'General',
+      imageUrl: imageUrl || '',
+      hasAudio: Boolean(audioUrl),
+      audioUrl: audioUrl || '',
+      hasVideo: hasVideo,
+      videoUrl: videoUrl || '',
+      videoType: videoType,
+      videoThumbnail: videoThumbnail || '',
+      date: formValues.date ? formValues.date.toISOString() : new Date().toISOString(),
+      author: 'Agustinos'
+    };
+  
+    // Generar HTML usando la función externa
+    const previewHTML = generatePreviewHTML(previewData);
+    
+    // Abrir nueva pestaña con el contenido
+    const newWindow = window.open('', '_blank');
+    newWindow.document.write(previewHTML);
+    newWindow.document.close();
+    newWindow.focus();
+  };
+
   // Guardar artículo (crear, actualizar o borrador)
   const handleSave = async (isDraft = false) => {
     try {
@@ -684,18 +713,23 @@ const ArticleEditor = () => {
 
   if (loading) {
     return (
-      <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-        <Content style={{ padding: '50px', textAlign: 'center' }}>
+      <div style={{ 
+        padding: '24px', 
+        background: '#f0f2f5', 
+        minHeight: '100vh' 
+      }}>
           <Spin size="large" />
           <div style={{ marginTop: 16 }}>Cargando artículo...</div>
-        </Content>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout style={{ minHeight: '100vh', background: '#f0f2f5' }}>
-      <Content style={{ padding: '24px' }}>
+      <div style={{ 
+        padding: '24px', 
+        background: '#f0f2f5', 
+        minHeight: '100vh' 
+      }}>
         {/* Header */}
         <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
           <Col>
@@ -714,11 +748,22 @@ const ArticleEditor = () => {
           <Col>
             <Space>
               <Button
+                icon={<EyeOutlined />}
+                onClick={openPreview}
+                size="large"
+                style={{
+                  borderColor: '#1890ff',
+                  color: '#1890ff'
+                }}
+              >
+                Vista Previa
+              </Button>
+              <Button
                 icon={<SaveOutlined />}
                 loading={saving}
                 onClick={() => handleSave(true)}
                 size="large"
-                style={{ 
+                style={{
                   borderColor: '#d9d9d9',
                   color: '#595959'
                 }}
@@ -1151,7 +1196,6 @@ const ArticleEditor = () => {
                       </span>
                     </span>
                   }
-                  required
                 >
                 <div 
                   className="quill-editor-wrapper"
@@ -1403,8 +1447,7 @@ const ArticleEditor = () => {
             </Card>
           </Col>
         </Row>
-      </Content>
-    </Layout>
+      </div>
   );
 };
 
