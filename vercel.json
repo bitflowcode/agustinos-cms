@@ -24,9 +24,6 @@
     "api/upload-image.js": {
       "maxDuration": 30
     },
-    "api/upload-audio.js": {
-      "maxDuration": 30
-    },
     "api/video-token.js": {
       "maxDuration": 30
     },
@@ -42,6 +39,14 @@
     {
       "source": "/api/upload/video",
       "destination": "http://49.12.239.163:3002/api/upload/video"
+    },
+    {
+      "source": "/api/upload/audio-token",
+      "destination": "http://49.12.239.163:3002/api/upload/audio-token"
+    },
+    {
+      "source": "/api/upload/audio",
+      "destination": "http://49.12.239.163:3002/api/upload/audio"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

@@ -47,10 +47,7 @@ const Login = () => {
           onFinish={onFinish}
           autoComplete="off"
           size="large"
-          initialValues={{
-            username: 'admin',
-            password: 'admin123'
-          }}
+          initialValues={{}}
         >
           <Form.Item
             name="username"
@@ -94,10 +91,6 @@ const Login = () => {
           </Form.Item>
         </Form>
         
-        <div style={{ marginTop: '16px', fontSize: '12px', color: '#666', textAlign: 'center' }}>
-          <p>Credenciales por defecto:</p>
-          <p>Usuario: <strong>admin</strong> | Contraseña: <strong>admin123</strong></p>
-        </div>
       </Card>
     </div>
   );

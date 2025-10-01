@@ -31,6 +31,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { articlesAPI } from '../utils/api';
+import { moveToTrash } from '../utils/trashApi';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -66,8 +67,10 @@ const ArticlesList = () => {
       const response = await articlesAPI.getArticles();
       
       if (response.success) {
-        setAllArticles(response.data);
-        message.success(`${response.data.length} artículos cargados`);
+        // Filtrar artículos eliminados (deleted_at no debe existir)
+        const activeArticles = response.data.filter(article => !article.deleted_at);
+        setAllArticles(activeArticles);
+        message.success(`${activeArticles.length} artículos cargados`);
       }
     } catch (error) {
       message.error('Error al cargar artículos');
@@ -94,23 +97,22 @@ const ArticlesList = () => {
     }
   };
 
-  // Eliminar artículo
-  const handleDeleteArticle = async (articleId, articleTitle) => {
-    try {
-      const response = await articlesAPI.deleteArticle(articleId);
-      
-      if (response.success) {
-        message.success(`Artículo "${articleTitle}" eliminado correctamente`);
-        // Recargar la lista
-        loadArticles();
-      } else {
-        message.error('Error al eliminar el artículo');
-      }
-    } catch (error) {
-      console.error('Error deleting article:', error);
-      message.error('Error al eliminar el artículo');
+// Mover artículo a papelera
+const handleDeleteArticle = async (articleId, articleTitle) => {
+  try {
+    const response = await moveToTrash(articleId);
+    
+    if (response.success) {
+      message.success(`Artículo "${articleTitle}" movido a la papelera`);
+      loadArticles(); // Recargar la lista
+    } else {
+      message.error('Error al mover a papelera');
     }
-  };
+  } catch (error) {
+    console.error('Error moving to trash:', error);
+    message.error('Error al mover a papelera');
+  }
+};
 
   // Duplicar artículo
   const handleDuplicateArticle = async (article) => {
@@ -376,8 +378,8 @@ const ArticlesList = () => {
             </Tooltip>
             <Tooltip title="Eliminar artículo">
               <Popconfirm
-                title="¿Estás seguro de eliminar este artículo?"
-                description={`Se eliminará "${truncateText(record.title, 40)}"`}
+                title="¿Mover a papelera?"
+                description={`"${truncateText(record.title, 40)}" se moverá a la papelera`}
                 onConfirm={() => handleDeleteArticle(record.id, record.title)}
                 okText="Sí, eliminar"
                 cancelText="Cancelar"

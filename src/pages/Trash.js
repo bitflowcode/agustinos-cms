@@ -1,151 +1,172 @@
-// src/pages/Trash.js
 import React, { useState, useEffect } from 'react';
 import {
-  Layout,
   Table,
   Card,
   Button,
   Space,
   Tag,
-  Popconfirm,
   message,
   Typography,
   Row,
   Col,
+  Popconfirm,
   Empty,
-  Alert
+  Avatar
 } from 'antd';
 import {
-  DeleteOutlined,
-  UndoOutlined,
-  ReloadOutlined,
   ArrowLeftOutlined,
-  ExclamationCircleOutlined
+  ReloadOutlined,
+  RollbackOutlined,
+  DeleteOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { articlesAPI } from '../utils/api';
+import { getTrashArticles, restoreArticle, deletePermanently } from '../utils/trashApi';
 import dayjs from 'dayjs';
 
-const { Content } = Layout;
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const Trash = () => {
   const navigate = useNavigate();
-  const [trashedArticles, setTrashedArticles] = useState([]);
+  const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Función para cargar artículos de la papelera
-  const loadTrashedArticles = async () => {
+  // Cargar artículos en papelera
+  const loadTrashArticles = async () => {
     setLoading(true);
     try {
-      // Por ahora simulamos datos hasta que implementes el backend
-      // const response = await articlesAPI.getTrashedArticles();
+      const response = await getTrashArticles();
       
-      // Datos simulados para desarrollo
-      const simulatedData = [
-        {
-          id: 999,
-          title: 'Artículo de prueba eliminado',
-          section: 'Buenos días',
-          deleted_at: '2025-09-27T10:30:00Z',
-          deleted_by: 'CMS Admin'
-        }
-      ];
-      
-      setTrashedArticles(simulatedData);
-      message.info('Cargando papelera... (funcionalidad en desarrollo)');
+      if (response.success) {
+        setArticles(response.data);
+        message.success(`${response.data.length} artículos en papelera`);
+      }
     } catch (error) {
-      console.error('Error loading trashed articles:', error);
       message.error('Error al cargar la papelera');
+      console.error('Error loading trash:', error);
     } finally {
       setLoading(false);
     }
   };
 
   // Restaurar artículo
-  const handleRestoreArticle = async (articleId, articleTitle) => {
+  const handleRestore = async (articleId, articleTitle) => {
     try {
-      // await articlesAPI.restoreArticle(articleId);
-      message.success(`Artículo "${articleTitle}" restaurado correctamente`);
-      loadTrashedArticles(); // Recargar lista
+      const response = await restoreArticle(articleId);
+      
+      if (response.success) {
+        message.success(`"${articleTitle}" restaurado correctamente`);
+        loadTrashArticles(); // Recargar lista
+      } else {
+        message.error('Error al restaurar artículo');
+      }
     } catch (error) {
       console.error('Error restoring article:', error);
-      message.error('Error al restaurar el artículo');
+      message.error('Error al restaurar artículo');
     }
   };
 
   // Eliminar permanentemente
-  const handlePermanentDelete = async (articleId, articleTitle) => {
+  const handleDeletePermanently = async (articleId, articleTitle) => {
     try {
-      // await articlesAPI.permanentDeleteArticle(articleId);
-      message.success(`Artículo "${articleTitle}" eliminado permanentemente`);
-      loadTrashedArticles(); // Recargar lista
+      const response = await deletePermanently(articleId);
+      
+      if (response.success) {
+        message.success(`"${articleTitle}" eliminado permanentemente`);
+        loadTrashArticles(); // Recargar lista
+      } else {
+        message.error('Error al eliminar permanentemente');
+      }
     } catch (error) {
-      console.error('Error permanently deleting article:', error);
-      message.error('Error al eliminar el artículo permanentemente');
-    }
-  };
-
-  // Vaciar papelera completa
-  const handleEmptyTrash = async () => {
-    try {
-      // await articlesAPI.emptyTrash();
-      message.success('Papelera vaciada correctamente');
-      setTrashedArticles([]);
-    } catch (error) {
-      console.error('Error emptying trash:', error);
-      message.error('Error al vaciar la papelera');
+      console.error('Error deleting permanently:', error);
+      message.error('Error al eliminar permanentemente');
     }
   };
 
   useEffect(() => {
-    loadTrashedArticles();
+    loadTrashArticles();
   }, []);
+
+  // Truncar texto
+  const truncateText = (text, maxLength = 100) => {
+    if (!text) return '';
+    const cleanText = text.replace(/<[^>]*>/g, '');
+    return cleanText.length > maxLength ? cleanText.substring(0, maxLength) + '...' : cleanText;
+  };
 
   // Formatear fecha
   const formatDate = (dateString) => {
+    if (!dateString) return 'Sin fecha';
     return dayjs(dateString).format('DD/MM/YYYY HH:mm');
   };
 
   // Columnas de la tabla
   const columns = [
     {
+      title: '',
+      dataIndex: 'imageUrl',
+      key: 'image',
+      width: 70,
+      render: (imageUrl) => (
+        <Avatar
+          size={48}
+          src={imageUrl}
+          style={{ 
+            backgroundColor: '#f0f0f0',
+            borderRadius: '8px',
+            width: '48px',
+            height: '48px',
+            opacity: 0.6
+          }}
+        >
+          {!imageUrl && '📄'}
+        </Avatar>
+      )
+    },
+    {
       title: 'Título',
       dataIndex: 'title',
       key: 'title',
       render: (text) => (
-        <Text strong style={{ color: '#666' }}>
-          {text}
-        </Text>
+        <div>
+          <Text strong style={{ fontSize: '14px', color: '#999' }}>
+            {truncateText(text, 60)}
+          </Text>
+        </div>
       )
     },
     {
       title: 'Sección',
       dataIndex: 'section',
       key: 'section',
-      width: 120,
+      width: 140,
       render: (section) => (
-        <Tag color="default">{section}</Tag>
+        section ? (
+          <Tag color="default">{section}</Tag>
+        ) : (
+          <Tag color="default">Sin sección</Tag>
+        )
+      )
+    },
+    {
+      title: 'Autor',
+      dataIndex: 'author',
+      key: 'author',
+      width: 120,
+      render: (author) => (
+        <Text type="secondary" style={{ fontSize: '12px' }}>
+          {author || 'Sin autor'}
+        </Text>
       )
     },
     {
       title: 'Eliminado',
       dataIndex: 'deleted_at',
       key: 'deleted_at',
-      width: 150,
-      render: (date) => (
-        <Text type="secondary" style={{ fontSize: '12px' }}>
-          {formatDate(date)}
+      width: 160,
+      render: (deleted_at) => (
+        <Text type="danger" style={{ fontSize: '12px' }}>
+          🗑️ {formatDate(deleted_at)}
         </Text>
-      )
-    },
-    {
-      title: 'Eliminado por',
-      dataIndex: 'deleted_by',
-      key: 'deleted_by',
-      width: 120,
-      render: (user) => (
-        <Text type="secondary">{user}</Text>
       )
     },
     {
@@ -154,35 +175,35 @@ const Trash = () => {
       width: 180,
       render: (_, record) => (
         <Space>
-          <Button
-            type="primary"
-            size="small"
-            icon={<UndoOutlined />}
-            onClick={() => handleRestoreArticle(record.id, record.title)}
-            style={{
-              backgroundColor: '#52c41a',
-              borderColor: '#52c41a'
-            }}
-          >
-            Restaurar
-          </Button>
-          
           <Popconfirm
-            title="Eliminar permanentemente"
-            description={`¿Eliminar "${record.title}" para siempre? Esta acción no se puede deshacer.`}
-            onConfirm={() => handlePermanentDelete(record.id, record.title)}
+            title="¿Restaurar artículo?"
+            description={`"${truncateText(record.title, 40)}" volverá a estar activo`}
+            onConfirm={() => handleRestore(record.id, record.title)}
+            okText="Sí, restaurar"
+            cancelText="Cancelar"
+          >
+            <Button
+              type="primary"
+              icon={<RollbackOutlined />}
+              size="small"
+            >
+              Restaurar
+            </Button>
+          </Popconfirm>
+
+          <Popconfirm
+            title="¿Eliminar PERMANENTEMENTE?"
+            description="Esta acción NO se puede deshacer"
+            onConfirm={() => handleDeletePermanently(record.id, record.title)}
             okText="Sí, eliminar"
             cancelText="Cancelar"
             okButtonProps={{ danger: true }}
-            icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
           >
             <Button
               danger
-              size="small"
               icon={<DeleteOutlined />}
-            >
-              Eliminar
-            </Button>
+              size="small"
+            />
           </Popconfirm>
         </Space>
       )
@@ -191,12 +212,10 @@ const Trash = () => {
 
   return (
     <div style={{ 
-      padding: '24px',
-      background: '#f5f5f5',
-      minHeight: '100vh',
-      width: '100%'
+      padding: '24px', 
+      background: '#f0f2f5', 
+      minHeight: '100vh' 
     }}>
-      
       {/* Header */}
       <Row justify="space-between" align="middle" style={{ marginBottom: 24 }}>
         <Col>
@@ -205,106 +224,49 @@ const Trash = () => {
               icon={<ArrowLeftOutlined />} 
               onClick={() => navigate('/articles')}
             >
-              Volver a Artículos
+              Artículos
             </Button>
             <Title level={2} style={{ margin: 0 }}>
-              Papelera
+              🗑️ Papelera
             </Title>
           </Space>
           <Text type="secondary">
-            {trashedArticles.length} artículos eliminados
+            {articles.length} artículo{articles.length !== 1 ? 's' : ''} eliminado{articles.length !== 1 ? 's' : ''}
           </Text>
         </Col>
         <Col>
-          <Space>
-            <Button 
-              icon={<ReloadOutlined />} 
-              onClick={loadTrashedArticles}
-              loading={loading}
-            >
-              Actualizar
-            </Button>
-            {trashedArticles.length > 0 && (
-              <Popconfirm
-                title="Vaciar papelera"
-                description="¿Eliminar todos los artículos de la papelera permanentemente? Esta acción no se puede deshacer."
-                onConfirm={handleEmptyTrash}
-                okText="Sí, vaciar"
-                cancelText="Cancelar"
-                okButtonProps={{ danger: true }}
-                icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
-              >
-                <Button danger icon={<DeleteOutlined />}>
-                  Vaciar Papelera
-                </Button>
-              </Popconfirm>
-            )}
-          </Space>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={loadTrashArticles}
+            loading={loading}
+          >
+            Actualizar
+          </Button>
         </Col>
       </Row>
 
-      {/* Alerta informativa */}
-      <Alert
-        message="Información sobre la papelera"
-        description="Los artículos eliminados se mantienen aquí durante 30 días antes de ser eliminados automáticamente. Puedes restaurarlos o eliminarlos permanentemente."
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-      />
-
       {/* Tabla de artículos eliminados */}
       <Card>
-        {trashedArticles.length === 0 ? (
+        {articles.length === 0 && !loading ? (
           <Empty
+            description="No hay artículos en la papelera"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              <span>
-                No hay artículos en la papelera
-                <br />
-                <Text type="secondary">
-                  Los artículos eliminados aparecerán aquí
-                </Text>
-              </span>
-            }
           />
         ) : (
           <Table
             columns={columns}
-            dataSource={trashedArticles}
+            dataSource={articles}
             rowKey="id"
             loading={loading}
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
-              showQuickJumper: true,
               showTotal: (total, range) => 
-                `${range[0]}-${range[1]} de ${total} artículos eliminados`
+                `${range[0]}-${range[1]} de ${total} artículos`
             }}
             scroll={{ x: 800 }}
           />
         )}
-      </Card>
-
-      {/* Información adicional */}
-      <Card 
-        title="Gestión de Papelera" 
-        size="small" 
-        style={{ marginTop: 16 }}
-      >
-        <Row gutter={16}>
-          <Col span={8}>
-            <Text type="secondary">Retención:</Text><br />
-            <Text>30 días automático</Text>
-          </Col>
-          <Col span={8}>
-            <Text type="secondary">Restauración:</Text><br />
-            <Text>Disponible en cualquier momento</Text>
-          </Col>
-          <Col span={8}>
-            <Text type="secondary">Eliminación permanente:</Text><br />
-            <Text>Irreversible</Text>
-          </Col>
-        </Row>
       </Card>
     </div>
   );

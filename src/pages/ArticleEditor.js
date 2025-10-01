@@ -334,55 +334,74 @@ const ArticleEditor = () => {
     return false; // Prevenir upload automático de Ant Design
   };
 
-  // Función para subir audio a Bunny CDN
-  const handleAudioUpload = async (file) => {
-    const isAudio = file.type.startsWith('audio/');
-    if (!isAudio) {
-      message.error('Solo puedes subir archivos de audio');
-      return false;
+// Función para subir audio a Bunny CDN (streaming directo - sin límite de tamaño)
+const handleAudioUpload = async (file) => {
+  const isAudio = file.type.startsWith('audio/');
+  if (!isAudio) {
+    message.error('Solo puedes subir archivos de audio');
+    return false;
+  }
+
+  // Sin límite de tamaño - streaming directo a Bunny CDN vía servidor Hetzner
+  console.log(`Subiendo audio de ${Math.round(file.size / 1024 / 1024)}MB...`);
+
+  setUploadingAudio(true);
+
+  try {
+    // 1) Solicitar token temporal al servidor de Hetzner
+    const tokenResponse = await fetch(`/api/upload/audio-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('cms_token') || ''}`,
+      },
+      body: JSON.stringify({
+        ext: file.name.split('.').pop() || 'mp3',
+        dir: 'audios'
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const tErr = await tokenResponse.text().catch(() => '');
+      throw new Error(`Token request failed: ${tErr || tokenResponse.status}`);
     }
 
-    const isLt10M = file.size / 1024 / 1024 < 10;
-    if (!isLt10M) {
-      message.error('El audio debe ser menor a 10MB');
-      return false;
+    const { token, finalUrl } = await tokenResponse.json();
+
+    // 2) Subir el fichero directamente al servidor de Hetzner (streaming)
+    const uploadResponse = await fetch(`/api/upload/audio?token=${encodeURIComponent(token)}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type || 'audio/mpeg',
+        'Authorization': `Bearer ${localStorage.getItem('cms_token') || ''}`,
+      },
+      body: file,
+    });
+
+    if (!uploadResponse.ok) {
+      const uErr = await uploadResponse.text().catch(() => '');
+      throw new Error(`Upload failed: ${uErr || uploadResponse.status}`);
     }
 
-    setUploadingAudio(true);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
+    const result = await uploadResponse.json();
     
-      // Obtener token de autenticación
-      const token = localStorage.getItem('cms_token');
-      
-      // Upload real a Bunny CDN (API Route del CMS → backend)
-      const response = await fetch('https://agustinos-cms.vercel.app/api/upload-audio', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-    
-      const result = await response.json();
-      
-      if (result.success) {
-        setAudioUrl(result.data.audioUrl);
-        message.success('Audio subido exitosamente');
-      } else {
-        message.error(result.error || 'Error al subir audio');
-      }
-
-    } catch (error) {
-      message.error('Error al subir el audio');
-    } finally {
-      setUploadingAudio(false);
+    if (result.success) {
+      // 3) Guardar URL final (CDN)
+      setAudioUrl(result.data.audioUrl);
+      message.success('Audio subido exitosamente');
+    } else {
+      throw new Error(result.error || 'Error en la respuesta del servidor');
     }
+  } catch (error) {
+    console.error('Error al subir el audio:', error);
+    message.error(error.message || 'Error al subir el audio');
+  } finally {
+    setUploadingAudio(false);
+  }
 
-    return false; // Prevenir upload automático de Ant Design
-  };
+  // Evitar que Ant Design haga upload automático
+  return false;
+};
 
   // Función para subir video MP4 a Bunny CDN (servidor de Hetzner)
   const handleVideoUpload = async (file) => {
@@ -584,6 +603,7 @@ const ArticleEditor = () => {
       console.log('📝 Valores del formulario:', values);
       console.log('📝 Guardando como borrador:', isDraft);
       
+      // Permitir guardar sin contenido
       // if (!content.trim()) {
       //   message.error('El contenido es obligatorio');
       //   return;
@@ -1188,11 +1208,12 @@ const ArticleEditor = () => {
                     }}>
                       📄 Contenido del artículo
                       <span style={{ 
-                        color: '#ff4d4f', 
+                        color: '#8c8c8c', 
                         fontSize: '14px',
-                        marginLeft: 4
+                        marginLeft: 4,
+                        fontWeight: 'normal'
                       }}>
-                        *
+                        (opcional)
                       </span>
                     </span>
                   }
@@ -1219,19 +1240,6 @@ const ArticleEditor = () => {
                     }}
                   />
                 </div>
-                {!content.trim() && (
-                  <div style={{ 
-                    color: '#ff4d4f', 
-                    fontSize: '13px', 
-                    marginTop: 8,
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4
-                  }}>
-                    ⚠️ El contenido es obligatorio
-                  </div>
-                )}
                 </Form.Item>
               </div>
             </Form>
