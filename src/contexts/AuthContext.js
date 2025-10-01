@@ -79,12 +79,24 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  // Función helper para verificar si el usuario es admin/super_admin
+  const isAdmin = () => {
+    return user && (user.role === 'admin' || user.role === 'super_admin');
+  };
+
+  // Función helper para verificar si el usuario es editor
+  const isEditor = () => {
+    return user && (user.role === 'editor' || isAdmin());
+  };
+
   const value = {
     user,
     isAuthenticated,
     loading,
     login,
     logout,
+    isAdmin,
+    isEditor
   };
 
   return (

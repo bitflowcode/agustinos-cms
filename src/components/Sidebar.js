@@ -10,7 +10,8 @@ import {
   MenuUnfoldOutlined,
   LogoutOutlined,
   UserOutlined,
-  AppstoreOutlined
+  AppstoreOutlined,
+  TeamOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,7 +22,7 @@ const { Text, Title } = Typography;
 
 const Sidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,42 +30,57 @@ const Sidebar = () => {
     logout();
   };
 
-  const menuItems = [
-    {
-      key: 'dashboard',
-      icon: <AppstoreOutlined />,
-      label: 'Dashboard',
-      onClick: () => navigate('/dashboard')
-    },
-    {
-      key: 'contenido',
-      icon: <FileTextOutlined />,
-      label: 'Contenido',
-      children: [
-        {
-          key: 'articles',
-          label: 'Lista de Contenido',
-          onClick: () => navigate('/articles')
-        },
-        {
-          key: 'new-article',
-          label: 'Crear nuevo',
-          onClick: () => navigate('/articles/new')
-        },
-        {
-          key: 'trash',
-          label: 'Papelera',
-          onClick: () => navigate('/trash')
-        }
-      ]
-    },
-    {
-      key: 'mi-app',
-      icon: <MobileOutlined />,
-      label: 'Mi app',
-      onClick: () => navigate('/mi-app')
+  // Construir menú dinámicamente según el rol
+  const buildMenuItems = () => {
+    const items = [
+      {
+        key: 'dashboard',
+        icon: <AppstoreOutlined />,
+        label: 'Dashboard',
+        onClick: () => navigate('/dashboard')
+      },
+      {
+        key: 'contenido',
+        icon: <FileTextOutlined />,
+        label: 'Contenido',
+        children: [
+          {
+            key: 'articles',
+            label: 'Lista de Contenido',
+            onClick: () => navigate('/articles')
+          },
+          {
+            key: 'new-article',
+            label: 'Crear nuevo',
+            onClick: () => navigate('/articles/new')
+          },
+          {
+            key: 'trash',
+            label: 'Papelera',
+            onClick: () => navigate('/trash')
+          }
+        ]
+      },
+      {
+        key: 'mi-app',
+        icon: <MobileOutlined />,
+        label: 'Mi app',
+        onClick: () => navigate('/mi-app')
+      }
+    ];
+
+    // Añadir menú de Usuarios solo si es admin
+    if (isAdmin()) {
+      items.push({
+        key: 'usuarios',
+        icon: <TeamOutlined />,
+        label: 'Usuarios',
+        onClick: () => navigate('/users')
+      });
     }
-  ];
+
+    return items;
+  };
 
   const getSelectedKeys = () => {
     const path = location.pathname;
@@ -74,6 +90,7 @@ const Sidebar = () => {
     if (path.startsWith('/articles/edit/')) return ['articles'];
     if (path === '/trash') return ['trash'];
     if (path === '/mi-app') return ['mi-app'];
+    if (path === '/users') return ['usuarios'];
     return [];
   };
 
@@ -145,12 +162,19 @@ const Sidebar = () => {
           
           {/* Info del usuario */}
           {!collapsed && (
-            <div style={{ 
-              background: '#f8f9fa', 
-              padding: 16, 
-              borderRadius: 8,
-              textAlign: 'center'
-            }}>
+            <div 
+              onClick={() => navigate('/profile')}
+              style={{ 
+                background: '#f8f9fa', 
+                padding: 16, 
+                borderRadius: 8,
+                textAlign: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.3s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#e9ecef'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#f8f9fa'}
+            >
               <Avatar 
                 size={48} 
                 icon={<UserOutlined />} 
@@ -171,7 +195,10 @@ const Sidebar = () => {
           )}
           
           {collapsed && (
-            <div style={{ textAlign: 'center' }}>
+            <div 
+              onClick={() => navigate('/profile')}
+              style={{ textAlign: 'center', cursor: 'pointer' }}
+            >
               <Avatar 
                 size={40} 
                 icon={<UserOutlined />} 
@@ -181,13 +208,13 @@ const Sidebar = () => {
           )}
         </div>
 
-        {/* Menú principal */}
+        {/* Menú principal - dinámico según rol */}
         <div style={{ flex: 1 }}>
           <Menu
             mode="inline"
             selectedKeys={getSelectedKeys()}
             defaultOpenKeys={getOpenKeys()}
-            items={menuItems}
+            items={buildMenuItems()}
             style={{ 
               border: 'none',
               fontSize: '14px'

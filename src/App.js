@@ -11,10 +11,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Articles from './pages/Articles';
 import ArticleEditor from './pages/ArticleEditor';
-
-// Importar nuevas páginas
 import MiApp from './pages/MiApp';
 import Trash from './pages/Trash';
+import Users from './pages/Users';
+import Profile from './pages/Profile';
 
 // Importar nuevo layout
 import AppLayout from './components/AppLayout';
@@ -28,6 +28,25 @@ const ProtectedRoute = ({ children }) => {
   }
   
   return isAuthenticated ? children : <Navigate to="/login" />;
+};
+
+// Componente para rutas solo de admin
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, loading, isAdmin } = useAuth();
+  
+  if (loading) {
+    return <div style={{ padding: '50px', textAlign: 'center' }}>Cargando...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!isAdmin()) {
+    return <Navigate to="/dashboard" />;
+  }
+  
+  return children;
 };
 
 // Componente para rutas públicas (solo para no autenticados)
@@ -109,6 +128,22 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <Trash />
+                </ProtectedRoute>
+              } 
+            />
+            <Route
+              path="/users" 
+              element={
+                <AdminRoute>
+                  <Users />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
                 </ProtectedRoute>
               } 
             />
