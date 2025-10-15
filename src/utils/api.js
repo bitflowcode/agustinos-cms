@@ -97,4 +97,13 @@ export const articlesAPI = {
   },
 };
 
+// Funciones de galería de medios
+export const mediaAPI = {
+  // Obtener lista de imágenes de Bunny CDN
+  getImages: async (folder = 'images', page = 1, limit = 20) => {
+    const response = await api.get(`/media-library?folder=${folder}&page=${page}&limit=${limit}`);
+    return response.data;
+  },
+};
+
 export default api;

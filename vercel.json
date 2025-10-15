@@ -29,6 +29,9 @@
     },
     "api/video-upload.js": {
       "maxDuration": 120
+    },
+    "api/media-library.js": {
+      "maxDuration": 30
     }
   },
   "rewrites": [
