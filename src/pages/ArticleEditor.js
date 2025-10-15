@@ -23,13 +23,15 @@ import {
   UploadOutlined,
   VideoCameraOutlined,
   PlayCircleOutlined,
-  EyeOutlined
+  EyeOutlined,
+  PictureOutlined
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { articlesAPI } from '../utils/api';
 import { generatePreviewHTML } from '../utils/previewGenerator';
+import MediaGalleryModal from '../components/MediaGalleryModal';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -62,6 +64,9 @@ const ArticleEditor = () => {
   const [videoThumbnail, setVideoThumbnail] = useState('');
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [uploadingVideoThumb, setUploadingVideoThumb] = useState(false);
+
+  // Estado para galería de medios
+  const [galleryVisible, setGalleryVisible] = useState(false);
 
   // Función para subir imagen desde el editor Quill
   const handleQuillImageUpload = async (file) => {
@@ -667,8 +672,6 @@ const handleAudioUpload = async (file) => {
         status: finalStatus
       };
   
-      console.log('📤 Datos del artículo a enviar:', articleData);
-  
       let response;
       
       if (isEditing) {
@@ -904,38 +907,63 @@ const handleAudioUpload = async (file) => {
                   }
                 >
                   <Space direction="vertical" style={{ width: '100%' }}>
-                    <Upload
-                      name="image"
-                      listType="picture-card"
-                      className="image-uploader"
-                      showUploadList={false}
-                      beforeUpload={handleImageUpload}
-                      accept="image/*"
-                      style={{ borderRadius: '8px' }}
-                    >
-                      {imageUrl ? (
+                    {/* Vista previa de la imagen */}
+                    {imageUrl && (
+                      <div style={{ 
+                        border: '2px solid #d9d9d9', 
+                        borderRadius: '8px', 
+                        padding: '8px',
+                        backgroundColor: '#fafafa'
+                      }}>
                         <img 
                           src={imageUrl} 
                           alt="article" 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} 
+                          style={{ 
+                            width: '100%', 
+                            maxHeight: '200px',
+                            objectFit: 'contain',
+                            borderRadius: '6px' 
+                          }} 
                         />
-                      ) : (
-                        <div style={{ textAlign: 'center' }}>
-                          <PlusOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
-                          <div style={{ marginTop: 8, fontWeight: '500' }}>Subir imagen</div>
-                        </div>
-                      )}
-                    </Upload>
-                    {imageUrl && (
-                      <Button 
-                        danger 
-                        size="small" 
-                        onClick={() => setImageUrl('')}
-                        style={{ borderRadius: '6px' }}
-                      >
-                        Eliminar imagen
-                      </Button>
+                      </div>
                     )}
+                    
+                    {/* Botones de acción */}
+                    <Space>
+                      <Upload
+                        name="image"
+                        showUploadList={false}
+                        beforeUpload={handleImageUpload}
+                        accept="image/*"
+                      >
+                        <Button 
+                          icon={<UploadOutlined />}
+                          loading={uploadingImage}
+                          style={{ borderRadius: '6px' }}
+                        >
+                          {imageUrl ? 'Cambiar imagen' : 'Subir desde dispositivo'}
+                        </Button>
+                      </Upload>
+                      
+                      <Button 
+                        icon={<PictureOutlined />}
+                        onClick={() => setGalleryVisible(true)}
+                        style={{ borderRadius: '6px', borderColor: '#52c41a', color: '#52c41a' }}
+                      >
+                        Galería de Bunny CDN
+                      </Button>
+                      
+                      {imageUrl && (
+                        <Button 
+                          danger 
+                          size="small" 
+                          onClick={() => setImageUrl('')}
+                          style={{ borderRadius: '6px' }}
+                        >
+                          Eliminar
+                        </Button>
+                      )}
+                    </Space>
                   </Space>
                 </Form.Item>
 
@@ -1420,6 +1448,16 @@ const handleAudioUpload = async (file) => {
           </Col>
         </Row>
         </Form>
+
+        {/* Modal de Galería de Medios */}
+        <MediaGalleryModal
+          visible={galleryVisible}
+          onClose={() => setGalleryVisible(false)}
+          onSelectImage={(url) => {
+            setImageUrl(url);
+            message.success('Imagen seleccionada desde la galería');
+          }}
+        />
       </div>
   );
 };
