@@ -218,21 +218,13 @@ const ArticleEditor = () => {
         const article = response.data;
         setCurrentArticle(article);
         
-        // Llenar el formulario con los datos existentes
-        form.setFieldsValue({
-          title: article.title,
-          section: article.section,
-          subtitle: article.subtitle,
-          date: article.date ? dayjs(article.date) : null
-        });
-        
         // Establecer el contenido en el editor
         setContent(article.content || '');
         
         // Establecer imagen y audio si existen
         setImageUrl(article.imageUrl || '');
         setAudioUrl(article.audioUrl || '');
-
+      
         // Establecer datos de video si existen
         if (article.hasVideo) {
           setHasVideo(true);
@@ -247,6 +239,21 @@ const ArticleEditor = () => {
             setVideoType('url');
           }
         }
+        
+        // ✅ CRÍTICO: Usar setTimeout para asegurar que el DOM esté listo
+        setTimeout(() => {
+          form.setFieldsValue({
+            title: article.title,
+            subtitle: article.subtitle,
+            section: article.section,
+            date: article.date ? dayjs(article.date) : null
+          });
+          
+          console.log('✅ Valores seteados:', {
+            section: article.section,
+            date: article.date
+          });
+        }, 300);
         
         message.success('Artículo cargado para edición');
       } else {
@@ -712,31 +719,16 @@ const handleAudioUpload = async (file) => {
     }
   }, [content, isEditing]);
 
-  // Forzar actualización de campos en la columna derecha
-  useEffect(() => {
-    if (currentArticle && isEditing) {
-      // Pequeño delay para asegurar que el formulario esté renderizado
-      const timer = setTimeout(() => {
-        // Forzar actualización de la sección
-        if (currentArticle.section) {
-          form.setFieldValue('section', currentArticle.section);
-        }
-        // Forzar actualización de la fecha
-        if (currentArticle.date) {
-          form.setFieldValue('date', dayjs(currentArticle.date));
-        }
-      }, 200);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [currentArticle, isEditing, form]);
-
   if (loading) {
     return (
       <div style={{ 
         padding: '24px', 
         background: '#f0f2f5', 
-        minHeight: '100vh' 
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center'
       }}>
           <Spin size="large" />
           <div style={{ marginTop: 16 }}>Cargando artículo...</div>
@@ -803,15 +795,15 @@ const handleAudioUpload = async (file) => {
           </Col>
         </Row>
 
-        <Row gutter={24}>
-          {/* Editor Principal */}
-          <Col xs={24} lg={18}>
-            <Card>
             <Form
               form={form}
               layout="vertical"
               size="large"
             >
+              <Row gutter={24}>
+                {/* Editor Principal */}
+                <Col xs={24} lg={18}>
+                  <Card>
               {/* Sección: Información Básica */}
               <div style={{ 
                 marginBottom: 24, 
@@ -825,7 +817,7 @@ const handleAudioUpload = async (file) => {
                   alignItems: 'center',
                   gap: 8
                 }}>
-                  📝 Información Básica
+                  📋 Información Básica
                 </Title>
                 
                 {/* Título */}
@@ -879,8 +871,6 @@ const handleAudioUpload = async (file) => {
                   />
                 </Form.Item>
               </div>
-
-
 
               {/* Sección: Contenido Multimedia */}
               <div style={{ 
@@ -1164,22 +1154,6 @@ const handleAudioUpload = async (file) => {
                 </Form.Item>
               </div>
 
-              {/* Campo de sección (oculto pero funcional) */}
-              <Form.Item
-                name="section"
-                style={{ display: 'none' }}
-              >
-                <Input />
-              </Form.Item>
-
-              {/* Campo de fecha (oculto pero funcional) */}
-              <Form.Item
-                name="date"
-                style={{ display: 'none' }}
-              >
-                <DatePicker />
-              </Form.Item>
-
               {/* Sección: Contenido Principal */}
               <div style={{ 
                 marginBottom: 24, 
@@ -1193,7 +1167,7 @@ const handleAudioUpload = async (file) => {
                   alignItems: 'center',
                   gap: 8
                 }}>
-                  ✍️ Contenido Principal
+                  ✏️ Contenido Principal
                 </Title>
 
                 <Form.Item
@@ -1242,7 +1216,6 @@ const handleAudioUpload = async (file) => {
                 </div>
                 </Form.Item>
               </div>
-            </Form>
             </Card>
           </Col>
 
@@ -1269,11 +1242,6 @@ const handleAudioUpload = async (file) => {
                   format="DD/MM/YYYY HH:mm"
                   placeholder="Seleccionar fecha y hora"
                   style={{ width: '100%' }}
-                  onChange={(value) => {
-                    setArticleDate(value);
-                    // Sincronizar con el campo oculto del formulario principal
-                    form.setFieldValue('date', value);
-                  }}
                 />
               </Form.Item>
             </Card>
@@ -1298,10 +1266,6 @@ const handleAudioUpload = async (file) => {
                   showSearch
                   allowClear
                   optionFilterProp="children"
-                  onChange={(value) => {
-                    // Sincronizar con el campo oculto del formulario principal
-                    form.setFieldValue('section', value);
-                  }}
                 >
                   {sections.map(section => (
                     <Option key={section.section_name} value={section.section_name}>
@@ -1455,6 +1419,7 @@ const handleAudioUpload = async (file) => {
             </Card>
           </Col>
         </Row>
+        </Form>
       </div>
   );
 };
