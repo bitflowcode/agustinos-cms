@@ -276,16 +276,18 @@ const handleDeleteArticle = async (articleId, articleTitle) => {
       title: '',
       dataIndex: 'imageUrl',
       key: 'image',
-      width: 70,
+      width: 90,
       render: (imageUrl) => (
         <Avatar
-          size={48}
+          size={72}
           src={imageUrl}
+          shape="square"
           style={{ 
             backgroundColor: '#f0f0f0',
             borderRadius: '8px',
-            width: '48px',
-            height: '48px'
+            width: '72px',
+            height: '72px',
+            objectFit: 'cover'
           }}
         >
           {!imageUrl && '📄'}

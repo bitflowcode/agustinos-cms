@@ -60,12 +60,12 @@ export const articlesAPI = {
   },
   
   // CMS - Obtener lista de artículos
-  getArticles: async (section = null) => {
-    let url = '/cms';
+  getArticles: async (section = null, limit = 300, offset = 0) => {
+    let url = `/cms?limit=${limit}&offset=${offset}`;
     
     // Agregar parámetro section si se especifica
     if (section) {
-      url += `?section=${encodeURIComponent(section)}`;
+      url += `&section=${encodeURIComponent(section)}`;
     }
     
     const response = await api.get(url);
